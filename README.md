@@ -12,10 +12,10 @@ Track: **Games With Real Economies** (NEAR Hackathon).
 ## Try it in 10 minutes
 
 1. Open https://odd-one-in-zeta.vercel.app and connect a NEAR testnet wallet (free at https://testnet.mynearwallet.com). See the question, the countdown and the streak pot, read live from the contract.
-2. Tap an answer and deposit 0.5 NEAR. One wallet approval deposits and adds a play key that can only call this game. See your balance in the top bar.
-3. Tap **Seal vote**. No wallet popup. See "Sealed", a three-step tracker (Sealed, Opening, Result) with a countdown, and within about 15 seconds more sealed envelopes arrive as the house players join your round.
-4. Keep the tab open. When the next round starts (3 minutes at most), see the "opening now" panel: each envelope turns over in its side's colour, the two tallies count up, and the smaller side is marked.
-5. One round later, see the result card: you won a stake, lost it, or the round was void, with **Save card** and **Post on X**. The round also appears under "Recent rounds".
+2. Tap an answer (orange or purple) and deposit 0.5 NEAR. One wallet approval deposits and adds a play key that can only call this game. See your balance in the top bar.
+3. Tap **Seal my pick**. No wallet popup. See "Your pick is in" with a three-step tracker (Sealed, Opening, Result) and a countdown. Within about 15 seconds the "Sealed" count rises as the house players join your round.
+4. Keep the tab open. When the next round starts (3 minutes at most), watch the crowd picture on the right: each opened pick becomes a circle in its side's colour and glides to its side, and the smaller crowd gets a dashed ring marked "smaller so far".
+5. One round later, see the result card: you won a stake, lost it, or the round was void, with **Save card** and **Post on X**. The crowd picture keeps the last result, and the round appears under "Recent rounds".
 
 No wallet? `npm run test:contract` runs the 24 unit tests, and `npm run seed -- status` reads the live contract.
 

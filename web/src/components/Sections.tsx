@@ -16,7 +16,7 @@ function Scrawl({ children }: { children: React.ReactNode }) {
     <span className="scrawl">
       {children}
       <svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M3 13 C40 4 70 17 104 9 C140 2 168 15 197 7" fill="none" stroke="#c8ff3c" strokeWidth="9" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <path d="M3 13 C40 4 70 17 104 9 C140 2 168 15 197 7" fill="none" stroke="var(--color-side-b)" strokeWidth="9" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       </svg>
     </span>
   );
@@ -34,7 +34,7 @@ export function RecentRounds({ rounds }: { rounds: RoundView[] }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Label n="02">Recent rounds</Label>
-          <h2 id="rounds-h" className="display mt-5 text-4xl font-extrabold sm:text-5xl">
+          <h2 id="rounds-h" className="display mt-5 text-3xl font-extrabold sm:text-4xl">
             The crowd, <Scrawl>after</Scrawl> the fact
           </h2>
         </div>
@@ -61,7 +61,7 @@ export function RecentRounds({ rounds }: { rounds: RoundView[] }) {
             {r.outcome === "Void" ? (
               <Stamp className="mt-4 text-ink-2">void · stakes back</Stamp>
             ) : (
-              <Stamp className="mt-4 bg-odd text-ink">{r.outcome === "A" ? r.question.a : r.question.b} · odd one in</Stamp>
+              <Stamp className="mt-4 bg-odd text-night">{r.outcome === "A" ? r.question.a : r.question.b} · odd one in</Stamp>
             )}
           </article>
         ))}
@@ -101,13 +101,13 @@ export function HowItWorks({ config, n }: { config: Config; n: string }) {
   const cellStyle: Record<string, string> = {
     Seal: "bg-ink text-paper",
     Open: "bg-paper-2 text-ink border border-rule",
-    Settle: "bg-odd text-ink",
+    Settle: "bg-odd text-night",
     "": "",
   };
   return (
     <section id="how" className="py-16 sm:py-20" aria-labelledby="how-h">
       <Label n={n}>How it works</Label>
-      <h2 id="how-h" className="display mt-5 max-w-3xl text-4xl font-extrabold sm:text-5xl">
+      <h2 id="how-h" className="display mt-5 max-w-3xl text-3xl font-extrabold sm:text-4xl">
         Sealed now, opened <Scrawl>next round</Scrawl>
       </h2>
       <p className="mt-4 max-w-2xl text-ink-2">
@@ -143,7 +143,7 @@ export function HowItWorks({ config, n }: { config: Config; n: string }) {
         {steps.map((s) => (
           <li key={s.n} className="border-b border-rule py-7 md:border-b-0">
             <span className="font-mono text-sm text-ink-2">{s.n}</span>
-            <h3 className="display mt-2 text-3xl font-bold">{s.title}</h3>
+            <h3 className="display mt-2 text-2xl font-bold">{s.title}</h3>
             <p className="mt-3 leading-relaxed text-ink-2">{s.body}</p>
             <p className="mt-4 font-mono text-xs">{s.code}</p>
           </li>
@@ -165,7 +165,7 @@ export function Payouts({ config, n }: { config: Config; n: string }) {
   return (
     <section id="payouts" className="py-16 sm:py-20" aria-labelledby="pay-h">
       <Label n={n}>Payouts</Label>
-      <h2 id="pay-h" className="display mt-5 max-w-3xl text-4xl font-extrabold sm:text-5xl">
+      <h2 id="pay-h" className="display mt-5 max-w-3xl text-3xl font-extrabold sm:text-4xl">
         Win one stake, or lose <Scrawl>one stake</Scrawl>
       </h2>
       <div className="mt-10 grid border-t border-ink sm:grid-cols-2 lg:grid-cols-4">
@@ -195,7 +195,7 @@ export function Fairness({ config, pot, n }: { config: Config; pot: string; n: s
       <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr]">
         <div>
           <Label n={n}>Fair play</Label>
-          <h2 id="fair-h" className="display mt-5 text-4xl font-extrabold sm:text-5xl">
+          <h2 id="fair-h" className="display mt-5 text-3xl font-extrabold sm:text-4xl">
             More wallets <Scrawl>don't</Scrawl> help
           </h2>
           <p className="mt-4 text-ink-2">
@@ -253,15 +253,15 @@ export function Footer() {
 
 export function Logo() {
   return (
-    <span className="inline-flex items-center gap-2">
-      <svg viewBox="0 0 40 28" className="h-6 w-auto" aria-hidden="true">
-        <circle cx="6" cy="7" r="4.5" fill="#0e0e10" />
-        <circle cx="18" cy="7" r="4.5" fill="#0e0e10" />
-        <circle cx="6" cy="21" r="4.5" fill="#0e0e10" />
-        <circle cx="18" cy="21" r="4.5" fill="#0e0e10" />
-        <circle cx="32" cy="14" r="6" fill="#c8ff3c" stroke="#0e0e10" strokeWidth="1.5" />
+    <span className="inline-flex items-center gap-2.5">
+      <svg viewBox="0 0 44 28" className="h-6 w-auto" aria-hidden="true">
+        <circle cx="7" cy="9" r="5.5" fill="var(--color-side-a)" />
+        <circle cx="16" cy="18" r="7" fill="var(--color-side-a)" />
+        <circle cx="5" cy="21" r="3.5" fill="var(--color-side-a)" />
+        <circle cx="34" cy="14" r="5.5" fill="var(--color-side-b)" />
+        <circle cx="34" cy="14" r="9" fill="none" stroke="var(--color-odd)" strokeWidth="1.6" strokeDasharray="3 2.5" />
       </svg>
-      <span className="display text-xl font-extrabold text-ink">odd one in</span>
+      <span className="display text-lg font-extrabold text-ink">odd one in</span>
     </span>
   );
 }

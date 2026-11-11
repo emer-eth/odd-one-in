@@ -73,7 +73,7 @@ function Token({ i, step }: { i: number; step: number }) {
   const ghost = i === GHOST;
   const [x, y] = step >= 3 ? columnPos(i) : crowdPos(i);
   const sealed = step === 1 || (ghost && step >= 2);
-  const fill = sealed ? "#8f8b80" : side === "A" ? "#ff5a3c" : "#3cc8ff";
+  const fill = sealed ? "#4a4470" : side === "A" ? "var(--color-side-a)" : "var(--color-side-b)";
   const lit = step >= 4 && !ghost && side === "A";
   const dim = step >= 4 && !ghost && side === "B";
   const inPot = ghost && step >= 5;
@@ -86,14 +86,14 @@ function Token({ i, step }: { i: number; step: number }) {
         transitionDelay: `${(i % 5) * 45 + Math.floor(i / 5) * 25}ms`,
       }}
     >
-      <rect x={-22} y={-15} width={44} height={30} rx={5} fill={fill} stroke={lit ? "#0e0e10" : ghost && step >= 2 ? "#55555e" : "none"} strokeWidth={lit ? 2 : 1.5} strokeDasharray={ghost && step >= 2 ? "4 3" : undefined} className="tok-fill" />
-      {/* envelope flap, shown while sealed */}
-      <path d="M-22 -15 L0 3 L22 -15" fill="none" stroke="#f4f2ec" strokeWidth={1.6} strokeLinejoin="round" style={{ opacity: sealed ? 0.9 : 0 }} className="tok-fill" />
-      <circle cx={0} cy={3} r={3.2} fill="#0e0e10" style={{ opacity: sealed ? 1 : 0 }} className="tok-fill" />
-      <text x={0} y={5} textAnchor="middle" fontSize={13} fontWeight={700} fill="#0e0e10" fontFamily="JetBrains Mono, monospace" style={{ opacity: sealed ? 0 : 1 }} className="tok-fill">
+      <rect x={-17} y={-17} width={34} height={34} rx={17} fill={fill} stroke={lit ? "var(--color-odd)" : ghost && step >= 2 ? "var(--color-ink-2)" : "none"} strokeWidth={lit ? 2 : 1.5} strokeDasharray={ghost && step >= 2 ? "4 3" : undefined} className="tok-fill" />
+      {/* a sealed pick shows nothing but a dot */}
+      
+      <circle cx={0} cy={0} r={4} fill="var(--color-night)" style={{ opacity: sealed ? 0.7 : 0 }} className="tok-fill" />
+      <text x={0} y={5} textAnchor="middle" fontSize={13} fontWeight={700} fill={side === "A" ? "var(--color-night)" : "#fff"} fontFamily="DM Mono, monospace" style={{ opacity: sealed ? 0 : 1 }} className="tok-fill">
         {side === "A" ? "Y" : "N"}
       </text>
-      {lit && <circle cx={18} cy={-12} r={5} fill="#c8ff3c" stroke="#0e0e10" strokeWidth={1.5} />}
+      
     </g>
   );
 }
@@ -123,9 +123,9 @@ export function Explainer() {
 
   return (
     <div ref={root} className="relative">
-      <div className="relative overflow-hidden rounded-[1.75rem] border-[1.5px] border-ink bg-paper-2/60">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-rule bg-paper-2/70">
         {/* ruled counting-sheet lines */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_31px,rgba(14,14,16,0.06)_31px,rgba(14,14,16,0.06)_32px)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_31px,rgba(243,240,255,0.04)_31px,rgba(243,240,255,0.04)_32px)]" />
         <div className="relative flex items-center justify-between px-5 pt-4 font-mono text-[11px] uppercase tracking-widest text-ink-2">
           <span>Watch one round</span>
           <span>
@@ -135,37 +135,37 @@ export function Explainer() {
         <svg viewBox={`0 0 ${W} ${H}`} className="relative block h-auto w-full" role="img" aria-label={`Step ${step + 1} of ${STEPS.length}: ${s.title}. ${s.caption}`}>
           {/* question card */}
           <g style={{ opacity: step >= 3 ? 0 : 1 }} className="tok-fill">
-            <text x={W / 2} y={34} textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif" fontWeight={800} fontSize={22} fill="#0e0e10">
+            <text x={W / 2} y={34} textAnchor="middle" fontFamily="Unbounded, sans-serif" fontWeight={800} fontSize={19} fill="var(--color-ink)">
               “Pineapple on pizza?”
             </text>
           </g>
           {/* column headers, tallies and results */}
           <g style={{ opacity: step >= 3 ? 1 : 0 }} className="tok-fill">
-            <text x={150} y={40} textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif" fontWeight={800} fontSize={22} fill="#0e0e10">Yes</text>
-            <text x={450} y={40} textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif" fontWeight={800} fontSize={22} fill="#0e0e10" style={{ opacity: step >= 4 ? 0.4 : 1 }}>No</text>
+            <text x={150} y={40} textAnchor="middle" fontFamily="Unbounded, sans-serif" fontWeight={800} fontSize={19} fill="var(--color-ink)">Yes</text>
+            <text x={450} y={40} textAnchor="middle" fontFamily="Unbounded, sans-serif" fontWeight={800} fontSize={19} fill="var(--color-ink)" style={{ opacity: step >= 4 ? 0.4 : 1 }}>No</text>
             <foreignObject x={95} y={238} width={120} height={30}>
               <div className="flex justify-center text-ink"><Tally n={6} /></div>
             </foreignObject>
             <foreignObject x={380} y={286} width={140} height={30}>
               <div className="flex justify-center text-ink" style={{ opacity: step >= 4 ? 0.4 : 1 }}><Tally n={8} /></div>
             </foreignObject>
-            <text x={150} y={286} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize={15} fill="#0e0e10">6</text>
-            <text x={450} y={334} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize={15} fill="#55555e">8</text>
+            <text x={150} y={286} textAnchor="middle" fontFamily="DM Mono, monospace" fontSize={15} fill="var(--color-ink)">6</text>
+            <text x={450} y={334} textAnchor="middle" fontFamily="DM Mono, monospace" fontSize={15} fill="var(--color-ink-2)">8</text>
           </g>
           {/* stamp on the winning column */}
           <g style={{ opacity: step >= 4 ? 1 : 0, transform: step >= 4 ? "translate(150px, 334px) rotate(-8deg) scale(1)" : "translate(150px, 334px) rotate(-8deg) scale(1.7)" }} className="stamp">
-            <rect x={-74} y={-17} width={148} height={34} rx={6} fill="#c8ff3c" stroke="#0e0e10" strokeWidth={2.5} />
-            <text x={0} y={6} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontWeight={700} fontSize={15} letterSpacing={2.5} fill="#0e0e10">ODD ONE IN</text>
+            <rect x={-74} y={-17} width={148} height={34} rx={17} fill="var(--color-odd)" />
+            <text x={0} y={6} textAnchor="middle" fontFamily="DM Mono, monospace" fontWeight={700} fontSize={15} letterSpacing={2.5} fill="var(--color-night)">ODD ONE IN</text>
           </g>
           {/* payouts */}
-          <g style={{ opacity: step >= 5 ? 1 : 0 }} className="tok-fill" fontFamily="JetBrains Mono, monospace" fontSize={14}>
-            <text x={150} y={64} textAnchor="middle" fill="#0e0e10" fontWeight={700}>+0.098 each</text>
-            <text x={450} y={64} textAnchor="middle" fill="#c9362a" fontWeight={700}>−0.1 each</text>
+          <g style={{ opacity: step >= 5 ? 1 : 0 }} className="tok-fill" fontFamily="DM Mono, monospace" fontSize={14}>
+            <text x={150} y={64} textAnchor="middle" fill="var(--color-ink)" fontWeight={700}>+0.098 each</text>
+            <text x={450} y={64} textAnchor="middle" fill="var(--color-alert)" fontWeight={700}>−0.1 each</text>
           </g>
           {/* streak pot */}
           <g style={{ opacity: step >= 5 ? 1 : step >= 3 ? 0.5 : 0 }} className="tok-fill">
-            <path d="M268 322 h64 v40 a8 8 0 0 1 -8 8 h-48 a8 8 0 0 1 -8 -8 z" fill="none" stroke="#0e0e10" strokeWidth={2} />
-            <text x={300} y={392} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize={12} fill="#55555e">
+            <path d="M268 322 h64 v40 a8 8 0 0 1 -8 8 h-48 a8 8 0 0 1 -8 -8 z" fill="none" stroke="var(--color-ink)" strokeWidth={2} />
+            <text x={300} y={392} textAnchor="middle" fontFamily="DM Mono, monospace" fontSize={12} fill="var(--color-ink-2)">
               {step >= 5 ? "pot +0.4" : "never opened"}
             </text>
           </g>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Masthead, WatchRound } from "./components/Hero";
+import { WatchRound } from "./components/Hero";
 import { BalanceChip, Countdown, Streak } from "./components/Panels";
-import { Crowd, Journey, Opening } from "./components/Round";
+import { CrowdField, Journey } from "./components/Round";
 import { Fairness, Footer, HowItWorks, Logo, Payouts, RecentRounds } from "./components/Sections";
 import { ResultCard } from "./components/ResultCard";
 import { commitHash, deleteSalt, loadSalt, newSalt, readableError, saveSalt } from "./lib/game";
@@ -241,7 +241,7 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button onClick={connect} disabled={!!busy} className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50">
+              <button onClick={connect} disabled={!!busy} className="rounded-xl bg-odd px-4 py-2 text-sm font-bold text-night disabled:opacity-50">
                 Connect wallet
               </button>
             )}
@@ -250,156 +250,178 @@ export default function App() {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
-        <Masthead roundId={cur.id} />
-
-        <section
-          id="play"
-          aria-label="This round"
-          className="rounded-[2rem] bg-board p-5 text-chalk shadow-[0_40px_80px_-40px_rgba(14,14,16,0.6)] sm:p-8"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="stub stub-dark">
-              <span>No. 01</span>
+        <section id="play" aria-label="This round" className="grid gap-10 pt-8 pb-10 text-chalk lg:grid-cols-2 lg:gap-12 lg:pt-12">
+          <div>
+            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs uppercase tracking-widest text-odd">
               <span className="flex items-center gap-2">
                 <span className="live-dot h-2 w-2 rounded-full bg-odd" />
-                Round {cur.id} · sealing
+                Round {cur.id}
               </span>
-            </span>
-            <span className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {g.player && <Streak player={g.player} config={cfg} />}
-              <span className="font-mono text-xs text-dim">
-                POT <span className="text-odd">{fmtNear(g.pot)} NEAR</span>
+              <span className="text-dim">
+                closes in{" "}
+                <span className="text-base text-chalk">
+                  <Countdown ms={msLeft} />
+                </span>
               </span>
-              <span className="flex items-baseline gap-2 text-sm text-dim">
-                closes in <span className="text-2xl text-chalk sm:text-3xl"><Countdown ms={msLeft} /></span>
-              </span>
-            </span>
-          </div>
+            </p>
+            <h1 className="display mt-4 text-[2rem] font-extrabold text-chalk sm:text-5xl">{cur.question.text}</h1>
+            <p className="mt-4 max-w-md text-[17px] leading-relaxed text-dim">
+              Everyone picks in secret. When the picks are opened, <span className="text-chalk">the smaller crowd wins</span>. Be the odd one in.
+            </p>
 
-          <h2 className="display mt-6 text-[2.5rem] font-extrabold text-chalk sm:text-6xl">{cur.question.text}</h2>
-          <p className="mt-3 font-mono text-xs text-dim">
-            {cur.commits} {cur.commits === 1 ? "vote" : "votes"} sealed · sides stay hidden until opening
-            {g.player && <> · {g.player.streak}/{cfg.streak_target} wins in a row toward a {fmtNear(cfg.streak_bonus)} NEAR bonus</>}
-          </p>
+            <div aria-live="polite" className="mt-5 space-y-2 empty:hidden">
+              {busy && <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">⏳ {busy}…</p>}
+              {error && (
+                <p className="rounded-xl border border-side-a/40 bg-side-a/10 px-4 py-3 text-sm">
+                  {error}{" "}
+                  <button className="ml-2 underline" onClick={() => setError(null)}>
+                    Dismiss
+                  </button>
+                </p>
+              )}
+              {needsDeposit && !busy && (
+                <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
+                  Add at least {fmtNear(cost + (g.player ? 0n : BigInt(cfg.storage_fee)))} NEAR to play.{" "}
+                  <button onClick={() => setDepositSignal((n) => n + 1)} className="font-semibold underline">
+                    Deposit
+                  </button>{" "}
+                  — your wallet asks once, then play needs no popups.
+                </p>
+              )}
+              {needsKey && !needsDeposit && !busy && (
+                <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
+                  One-tap play isn&apos;t set up in this browser.{" "}
+                  <button onClick={enable} className="font-semibold underline">
+                    Enable it
+                  </button>{" "}
+                  (one wallet approval; the key can only call this game).
+                </p>
+              )}
+            </div>
 
-          <div aria-live="polite" className="mt-5 space-y-2 empty:hidden">
-            {busy && <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">⏳ {busy}…</p>}
-            {error && (
-              <p className="rounded-xl border border-side-a/40 bg-side-a/10 px-4 py-3 text-sm">
-                {error}{" "}
-                <button className="ml-2 underline" onClick={() => setError(null)}>
-                  Dismiss
-                </button>
-              </p>
-            )}
-            {needsDeposit && !busy && (
-              <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
-                Add at least {fmtNear(cost + (g.player ? 0n : BigInt(cfg.storage_fee)))} NEAR to play.{" "}
-                <button onClick={() => setDepositSignal((n) => n + 1)} className="font-semibold underline">
-                  Deposit
-                </button>{" "}
-                — your wallet asks once, then play needs no popups.
-              </p>
-            )}
-            {needsKey && !needsDeposit && !busy && (
-              <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
-                One-tap play isn't set up in this browser.{" "}
-                <button onClick={enable} className="font-semibold underline">
-                  Enable it
-                </button>{" "}
-                (one wallet approval; the key can only call this game).
-              </p>
-            )}
-          </div>
-
-          <div className="mt-6">
-            {committed ? (
-              <div className={`grid min-h-[300px] place-items-center rounded-3xl border border-board-line bg-board-2 p-6 text-center sm:min-h-[360px] ${justSealed ? "animate-seal" : ""}`}>
-                <div>
-                  <div className="mx-auto h-28 w-40 [perspective:600px]">
-                    <div className={`relative h-full w-full rounded-xl ${myCurChoice === "A" ? "bg-side-a" : myCurChoice === "B" ? "bg-side-b" : "bg-board-line"}`}>
-                      <div className={`absolute inset-x-0 top-0 h-1/2 origin-top bg-black/25 [clip-path:polygon(0_0,100%_0,50%_100%)] ${justSealed ? "animate-flap" : ""}`} />
+            <div className="mt-6">
+              {committed ? (
+                <div className={`rounded-3xl border border-board-line bg-board-2 p-6 ${justSealed ? "animate-seal" : ""}`}>
+                  <div className="flex items-center gap-5">
+                    <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-full font-mono text-[11px] tracking-widest ${myCurChoice === "A" ? "bg-side-a text-night" : myCurChoice === "B" ? "bg-side-b text-white" : "bg-board-line text-dim"}`}>
+                      SEALED
+                    </span>
+                    <div>
+                      <p className="display text-2xl font-extrabold">Your pick is in.</p>
+                      <p className="mt-1 text-dim">
+                        {myCurChoice ? <>You picked <span className="text-chalk">{myCurChoice === "A" ? cur.question.a : cur.question.b}</span>. Nobody else can see it.</> : "Nobody can see it until it's opened."}
+                      </p>
                     </div>
                   </div>
-                  <p className="display mt-6 text-3xl font-extrabold">Sealed.</p>
-                  <div className="mt-5">
-                    <Journey stage={1} ms={msLeft} label="Your vote in this round" />
-                  </div>
                   <div className="mt-6">
-                    <Crowd n={cur.commits} mine />
+                    <Journey stage={1} ms={msLeft} label={`Round ${cur.id}`} />
                   </div>
-                  <p className="mt-2 text-dim">
-                    {comeBack} {myCurChoice && <span>You picked {myCurChoice === "A" ? cur.question.a : cur.question.b}.</span>}
+                  <p className="mt-5 text-sm text-dim">{comeBack}</p>
+                  <p className="mt-2 text-sm text-side-a">
+                    A pick that isn&apos;t opened in that window loses its stake and bond ({fmtNear(cost)} NEAR). It can only be opened from this browser.
                   </p>
-                  <p className="mx-auto mt-3 max-w-md text-sm text-side-a">
-                    A vote that isn&apos;t opened in that window loses its stake and bond ({fmtNear(cost)} NEAR). It can only be opened from this browser.
-                  </p>
-                  {warnStorage && <p className="mt-2 text-sm text-side-a">Clearing this browser&apos;s data before then loses the vote.</p>}
+                  {warnStorage && <p className="mt-2 text-sm text-side-a">Clearing this browser&apos;s data before then loses the pick.</p>}
                 </div>
-              </div>
-            ) : (
-              <div className="grid grid-rows-2 gap-3 sm:h-[360px] sm:grid-cols-2 sm:grid-rows-1">
-                {(["A", "B"] as const).map((side) => {
-                  const label = side === "A" ? cur.question.a : cur.question.b;
-                  const isSel = selected === side;
-                  const dim = selected && !isSel;
-                  return (
-                    <button
-                      key={side}
-                      disabled={!canPick}
-                      onClick={() => (account ? setSelected(isSel ? null : side) : connect())}
-                      aria-pressed={isSel}
-                      className={`relative flex min-h-[170px] items-end rounded-3xl p-6 text-left transition duration-200 ${side === "A" ? "bg-side-a" : "bg-side-b"} ${
-                        dim ? "opacity-30" : "hover:-translate-y-0.5"
-                      } ${isSel ? "ring-4 ring-chalk ring-offset-4 ring-offset-board" : ""} disabled:cursor-not-allowed`}
-                    >
-                      <span className="display text-4xl font-extrabold text-board sm:text-5xl">{label}</span>
-                      <span className="absolute right-5 top-5 font-mono text-sm text-board/70">{isSel ? "selected" : side}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {selected && !committed && (
-            <div className="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-board-line bg-board-2/95 p-3 pl-5 backdrop-blur">
-              <p className="flex-1 text-sm text-dim">
-                Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} NEAR (bond{" "}
-                {fmtNear(cfg.bond)} returns when opened)
-                <span className="mt-1 block text-xs">
-                  It must be opened {openWindow}. This tab does it for you if it stays open; unopened votes lose stake and bond.
-                </span>
-              </p>
-              <button
-                onClick={needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
-                disabled={!!busy}
-                className="rounded-full bg-chalk px-6 py-3 font-semibold text-board disabled:opacity-40"
-              >
-                {needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal vote"}
-              </button>
-            </div>
-          )}
-
-          {!account && (
-            <p className="mt-4 text-sm text-dim">
-              Tap an answer to connect a NEAR testnet wallet.{" "}
-              <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
-                Need one?
-              </a>
-            </p>
-          )}
-
-          {g.prev && (g.prev.commits > 0 || g.entryPrev?.committed) && (
-            <div className="mt-6">
-              <Opening round={g.prev} entry={g.entryPrev} salt={g.prevSalt} opening={busy === "Opening yesterday's vote"} ms={msLeft} />
-              {g.entryPrev?.committed && (
-                <div className="mt-4 text-center">
-                  <Journey stage={2} ms={msLeft} label={`Your vote in round ${g.prev.id}`} />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(["A", "B"] as const).map((side) => {
+                    const label = side === "A" ? cur.question.a : cur.question.b;
+                    const isSel = selected === side;
+                    const dim = selected && !isSel;
+                    return (
+                      <button
+                        key={side}
+                        disabled={!canPick}
+                        onClick={() => (account ? setSelected(isSel ? null : side) : connect())}
+                        aria-pressed={isSel}
+                        className={`relative flex min-h-[150px] flex-col justify-between rounded-3xl p-5 text-left transition duration-200 sm:min-h-[190px] ${side === "A" ? "bg-side-a text-night" : "bg-side-b text-white"} ${
+                          dim ? "opacity-30" : "hover:-translate-y-0.5"
+                        } ${isSel ? "ring-4 ring-odd ring-offset-4 ring-offset-paper" : ""} disabled:cursor-not-allowed`}
+                      >
+                        <span className="font-mono text-xs tracking-widest opacity-80">{isSel ? "SELECTED" : `PICK ${side}`}</span>
+                        <span className="display text-2xl font-extrabold sm:text-[1.7rem]">{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          )}
+
+            {selected && !committed && (
+              <div className="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-board-line bg-board-2/95 p-3 pl-5 backdrop-blur">
+                <p className="flex-1 text-sm text-dim">
+                  Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} NEAR (bond{" "}
+                  {fmtNear(cfg.bond)} returns when opened)
+                  <span className="mt-1 block text-xs">
+                    It must be opened {openWindow}. This tab does it for you if it stays open; unopened picks lose stake and bond.
+                  </span>
+                </p>
+                <button
+                  onClick={needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
+                  disabled={!!busy}
+                  className="rounded-full bg-odd px-6 py-3 font-semibold text-night disabled:opacity-40"
+                >
+                  {needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal my pick"}
+                </button>
+              </div>
+            )}
+
+            {!account && (
+              <p className="mt-4 text-sm text-dim">
+                Tap an answer to connect a NEAR testnet wallet.{" "}
+                <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
+                  Need one?
+                </a>
+              </p>
+            )}
+
+            <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 font-mono text-xs uppercase tracking-widest text-dim">
+              <div>
+                <dt>Sealed</dt>
+                <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">{cur.commits}</dd>
+              </div>
+              <div>
+                <dt>Streak pot</dt>
+                <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">{fmtNear(g.pot)} <span className="text-base text-dim">NEAR</span></dd>
+              </div>
+              {g.player && (
+                <div title={`Win ${cfg.streak_target} in a row for a ${fmtNear(cfg.streak_bonus)} NEAR bonus`}>
+                  <dt>Your streak</dt>
+                  <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">
+                    {g.player.streak} <span className="text-base text-dim">/ {cfg.streak_target}</span>
+                  </dd>
+                </div>
+              )}
+            </dl>
+            {g.player && (
+              <div className="mt-4">
+                <Streak player={g.player} config={cfg} />
+              </div>
+            )}
+          </div>
+
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <CrowdField
+              round={g.prev && g.prev.commits > 0 ? g.prev : g.recent[0] ?? null}
+              ms={msLeft}
+              sealedNow={cur.commits}
+              mine={g.prev && g.prev.commits > 0 ? g.entryPrev?.revealed ?? null : null}
+            />
+            {g.prev && g.entryPrev?.committed && (
+              <div className="mt-4 rounded-2xl border border-board-line bg-board-2 p-5">
+                <Journey stage={2} ms={msLeft} label={`Your pick in round ${g.prev.id}`} />
+                <p className={`mt-3 text-sm ${!g.entryPrev.revealed && !g.prevSalt ? "text-side-a" : "text-dim"}`}>
+                  {g.entryPrev.revealed
+                    ? `Your pick is open: ${g.entryPrev.revealed === "A" ? g.prev.question.a : g.prev.question.b}.`
+                    : busy === "Opening yesterday's vote"
+                      ? "Opening your pick…"
+                      : g.prevSalt
+                        ? "Your pick is waiting to be opened."
+                        : "This pick was sealed on another device, or this browser's data was cleared, so it can't be opened here. Unopened picks lose stake and bond."}
+                </p>
+              </div>
+            )}
+          </div>
         </section>
 
         <RecentRounds rounds={g.recent} />

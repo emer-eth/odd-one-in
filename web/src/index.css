@@ -1,27 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  /* page */
-  --color-paper: #f4f2ec;
-  --color-paper-2: #ebe8e0;
-  --color-rule: #d8d4c9;
-  --color-ink: #0e0e10;
-  --color-ink-2: #55555e;
-  /* the board (dark game panel) */
-  --color-board: #111114;
-  --color-board-2: #1b1b20;
-  --color-board-line: #2b2b32;
-  --color-chalk: #f5f2ea;
-  --color-dim: #8a8a94;
-  /* the two sides and the odd one in */
-  --color-side-a: #ff5a3c;
-  --color-side-b: #3cc8ff;
-  --color-odd: #c8ff3c;
-  --color-alert: #c9362a;
+  /* the page: a night sky the crowd gathers on */
+  --color-paper: #12101c;
+  --color-paper-2: #1b1830;
+  --color-rule: #2c2748;
+  --color-ink: #f3f0ff;
+  --color-ink-2: #a49fc0;
+  /* panels on the page */
+  --color-board: #171428;
+  --color-board-2: #201c36;
+  --color-board-line: #332d54;
+  --color-chalk: #f3f0ff;
+  --color-dim: #a49fc0;
+  /* the two sides, the odd one in, and text that sits on them */
+  --color-side-a: #ff6b4a;
+  --color-side-b: #7c5cff;
+  --color-odd: #c6ff4d;
+  --color-night: #12101c;
+  --color-alert: #ff8a7a;
 
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
-  --font-sans: "Instrument Sans", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Unbounded", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 html {
@@ -40,14 +41,14 @@ body {
 body {
   min-height: 100dvh;
   overflow-x: hidden;
-  /* faint paper grain */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.05 0 0 0 0 0.06 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: radial-gradient(1200px 600px at 78% -10%, rgba(124, 92, 255, 0.16), transparent 60%), radial-gradient(900px 500px at 0% 0%, rgba(255, 107, 74, 0.08), transparent 55%);
+  background-repeat: no-repeat;
 }
 
 .display {
   font-family: var(--font-display);
-  letter-spacing: -0.035em;
-  line-height: 0.98;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
 }
 
 /* A word circled by hand, like marking the odd one out on a sheet. */
@@ -119,4 +120,16 @@ input:focus-visible {
 .journey-now { animation: journey-now 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .env-in, .env-open, .journey-now { animation: none; }
+}
+
+/* The crowd: circles drift a little, glide to their side when opened, and the smaller crowd gets a ring. */
+.crowd-dot { transition: transform 1100ms cubic-bezier(0.2, 0.8, 0.2, 1), fill 500ms ease, r 500ms ease, opacity 500ms ease; }
+@keyframes drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(3px, -5px); } }
+.crowd-drift { animation: drift 6s ease-in-out infinite; }
+@keyframes ring-in { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+.crowd-ring { transform-box: fill-box; transform-origin: center; animation: ring-in 700ms 500ms cubic-bezier(0.3, 1.4, 0.5, 1) both, spin 40s linear infinite; }
+@keyframes spin { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  .crowd-dot { transition: none; }
+  .crowd-drift, .crowd-ring { animation: none; }
 }

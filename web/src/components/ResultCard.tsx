@@ -33,7 +33,7 @@ export function ResultCard({ item, round, stake, onClose }: { item: ClaimItem; r
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Round result">
       <div className="w-full max-w-lg rounded-3xl text-chalk bg-board p-6 sm:p-8 border border-board-line">
         <p className="font-mono text-xs uppercase tracking-widest text-dim">Round {item.round_id} result</p>
-        <h2 className="mt-2 display text-2xl sm:text-3xl font-extrabold">{round.question.text}</h2>
+        <h2 className="mt-2 display text-xl sm:text-2xl font-extrabold">{round.question.text}</h2>
         <div className="mt-6 space-y-3">
           {([
             ["A", round.question.a, a, winA, "bg-side-a"],
@@ -118,37 +118,37 @@ async function shareCard(item: ClaimItem, round: RoundView) {
   c.width = W;
   c.height = H;
   const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#0B0B0F";
+  ctx.fillStyle = "#12101C";
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#8A8A94";
-  ctx.font = "600 24px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "#A49FC0";
+  ctx.font = "600 24px 'DM Mono', monospace";
   ctx.fillText(`ODD ONE IN · ROUND ${item.round_id}`, 72, 92);
-  ctx.fillStyle = "#F5F2EA";
-  ctx.font = "800 60px 'Bricolage Grotesque', sans-serif";
+  ctx.fillStyle = "#F3F0FF";
+  ctx.font = "800 60px 'Unbounded', sans-serif";
   const lines = wrap(ctx, round.question.text, W - 144).slice(0, 2);
   lines.forEach((l, i) => ctx.fillText(l, 72, 176 + i * 70));
   const top = 176 + lines.length * 70 + 20;
   const max = Math.max(round.revealed_a, round.revealed_b, 1);
   const rows: Array<[string, number, string, boolean]> = [
-    [round.question.a, round.revealed_a, "#FF5A3C", item.outcome === "A"],
-    [round.question.b, round.revealed_b, "#3CC8FF", item.outcome === "B"],
+    [round.question.a, round.revealed_a, "#FF6B4A", item.outcome === "A"],
+    [round.question.b, round.revealed_b, "#7C5CFF", item.outcome === "B"],
   ];
   rows.forEach(([label, n, color, lit], i) => {
     const y = top + i * 92;
-    ctx.fillStyle = lit ? "#C8FF3C" : "#F5F2EA";
-    ctx.font = "700 32px 'Bricolage Grotesque', sans-serif";
+    ctx.fillStyle = lit ? "#C6FF4D" : "#F3F0FF";
+    ctx.font = "700 32px 'Unbounded', sans-serif";
     ctx.fillText(label, 72, y);
-    ctx.font = "600 32px 'JetBrains Mono', monospace";
+    ctx.font = "600 32px 'DM Mono', monospace";
     ctx.textAlign = "right";
     ctx.fillText(String(n), W - 72, y);
     ctx.textAlign = "left";
-    ctx.fillStyle = "#16161D";
+    ctx.fillStyle = "#201C36";
     ctx.fillRect(72, y + 16, W - 144, 28);
     ctx.fillStyle = color;
     ctx.fillRect(72, y + 16, Math.max(8, ((W - 144) * n) / max), 28);
   });
-  ctx.fillStyle = item.result === "Win" ? "#C8FF3C" : "#F5F2EA";
-  ctx.font = "800 40px 'Bricolage Grotesque', sans-serif";
+  ctx.fillStyle = item.result === "Win" ? "#C6FF4D" : "#F3F0FF";
+  ctx.font = "800 40px 'Unbounded', sans-serif";
   ctx.fillText(COPY[item.result], 72, H - 64);
 
   const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));

@@ -122,7 +122,7 @@ export function BalanceChip({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
-            className="mt-1 w-full rounded-xl border border-rule bg-white/60 px-3 py-2.5 font-mono"
+            className="mt-1 w-full rounded-xl border border-rule bg-paper-2 px-3 py-2.5 font-mono"
           />
           <p className="mt-2 text-xs leading-relaxed text-ink-2">
             {open === "deposit"
