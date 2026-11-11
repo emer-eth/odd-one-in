@@ -109,3 +109,14 @@ input:focus-visible {
 
 .stub-dark { border-color: rgba(245, 242, 234, 0.55); }
 .stub-dark > span + span { border-left-color: rgba(245, 242, 234, 0.55); }
+
+/* The round on the board: envelopes arrive sealed, then turn over in their side's colour. */
+@keyframes env-in { from { opacity: 0; transform: translateY(-10px) scale(0.8); } to { opacity: 1; transform: none; } }
+.env-in { animation: env-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+@keyframes env-open { 0% { transform: rotateX(0) scale(1); } 50% { transform: rotateX(90deg) scale(1.15); } 100% { transform: rotateX(0) scale(1); } }
+.env-open { animation: env-open 520ms ease-out both; }
+@keyframes journey-now { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.journey-now { animation: journey-now 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .env-in, .env-open, .journey-now { animation: none; }
+}

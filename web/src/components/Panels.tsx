@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fmtNear, parseNear, type Config, type EntryView, type Player, type RoundView } from "../lib/near";
-import type { SaltRecord } from "../lib/game";
+import { fmtNear, parseNear, type Config, type Player } from "../lib/near";
 
 export function Countdown({ ms }: { ms: number }) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -136,36 +135,6 @@ export function BalanceChip({
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-/** The round in its opening phase (on the dark board): live opened tally and this player's status. */
-export function Yesterday({ round, entry, salt, opening }: { round: RoundView; entry: EntryView | null; salt: SaltRecord | null; opening: boolean }) {
-  const opened = round.revealed_a + round.revealed_b;
-  const lost = entry?.committed && !entry.revealed && !salt && !opening;
-  let status: string | null = null;
-  if (entry?.committed) {
-    if (entry.revealed) status = `Your vote is open: ${entry.revealed === "A" ? round.question.a : round.question.b}.`;
-    else if (opening) status = "Opening your vote…";
-    else if (!salt)
-      status = "This vote was sealed on another device, or this browser's data was cleared, so it can't be opened here. Unopened votes forfeit stake and bond.";
-    else status = "Your vote is waiting to be opened.";
-  }
-  return (
-    <div className="grid gap-3 border-t border-board-line pt-5 sm:grid-cols-[1fr_auto] sm:items-center" aria-label="Previous round">
-      <div>
-        <p className="font-mono text-xs uppercase tracking-widest text-dim">Round #{round.id} · opening now</p>
-        <p className="mt-1 font-semibold text-chalk">{round.question.text}</p>
-        {status && <p className={`mt-1 text-sm ${lost ? "text-side-a" : "text-dim"}`}>{status}</p>}
-      </div>
-      <div className="flex items-center gap-4 font-mono text-sm">
-        <span className="text-side-a">{round.question.a} {round.revealed_a}</span>
-        <span className="text-side-b">{round.question.b} {round.revealed_b}</span>
-        <span className="text-dim">
-          {opened}/{round.commits} opened
-        </span>
-      </div>
     </div>
   );
 }

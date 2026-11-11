@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Hero } from "./components/Hero";
-import { BalanceChip, Countdown, Streak, Yesterday } from "./components/Panels";
+import { Masthead, WatchRound } from "./components/Hero";
+import { BalanceChip, Countdown, Streak } from "./components/Panels";
+import { Crowd, Journey, Opening } from "./components/Round";
 import { Fairness, Footer, HowItWorks, Logo, Payouts, RecentRounds } from "./components/Sections";
 import { ResultCard } from "./components/ResultCard";
 import { commitHash, deleteSalt, loadSalt, newSalt, readableError, saveSalt } from "./lib/game";
@@ -34,8 +35,6 @@ export default function App() {
   const [, tick] = useState(0);
   const autoTried = useRef(new Set<string>());
   const [depositSignal, setDepositSignal] = useState(0);
-  const board = useRef<HTMLElement>(null);
-  const goPlay = () => board.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 
   useEffect(() => {
     restoreAccount().then((a) => a && setAccount(a));
@@ -251,11 +250,10 @@ export default function App() {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
-        <Hero roundId={cur.id} onPlay={goPlay} />
+        <Masthead roundId={cur.id} />
 
         <section
           id="play"
-          ref={board}
           aria-label="This round"
           className="rounded-[2rem] bg-board p-5 text-chalk shadow-[0_40px_80px_-40px_rgba(14,14,16,0.6)] sm:p-8"
         >
@@ -267,15 +265,21 @@ export default function App() {
                 Round {cur.id} · sealing
               </span>
             </span>
-            <span className="flex items-baseline gap-2 text-sm text-dim">
-              closes in <span className="text-2xl text-chalk sm:text-3xl"><Countdown ms={msLeft} /></span>
+            <span className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {g.player && <Streak player={g.player} config={cfg} />}
+              <span className="font-mono text-xs text-dim">
+                POT <span className="text-odd">{fmtNear(g.pot)} NEAR</span>
+              </span>
+              <span className="flex items-baseline gap-2 text-sm text-dim">
+                closes in <span className="text-2xl text-chalk sm:text-3xl"><Countdown ms={msLeft} /></span>
+              </span>
             </span>
           </div>
 
           <h2 className="display mt-6 text-[2.5rem] font-extrabold text-chalk sm:text-6xl">{cur.question.text}</h2>
           <p className="mt-3 font-mono text-xs text-dim">
-            {cur.commits} {cur.commits === 1 ? "vote" : "votes"} sealed · sides stay hidden until opening · streak pot{" "}
-            <span className="text-odd">{fmtNear(g.pot)} NEAR</span>
+            {cur.commits} {cur.commits === 1 ? "vote" : "votes"} sealed · sides stay hidden until opening
+            {g.player && <> · {g.player.streak}/{cfg.streak_target} wins in a row toward a {fmtNear(cfg.streak_bonus)} NEAR bonus</>}
           </p>
 
           <div aria-live="polite" className="mt-5 space-y-2 empty:hidden">
@@ -318,6 +322,12 @@ export default function App() {
                     </div>
                   </div>
                   <p className="display mt-6 text-3xl font-extrabold">Sealed.</p>
+                  <div className="mt-5">
+                    <Journey stage={1} ms={msLeft} label="Your vote in this round" />
+                  </div>
+                  <div className="mt-6">
+                    <Crowd n={cur.commits} mine />
+                  </div>
                   <p className="mt-2 text-dim">
                     {comeBack} {myCurChoice && <span>You picked {myCurChoice === "A" ? cur.question.a : cur.question.b}.</span>}
                   </p>
@@ -380,24 +390,20 @@ export default function App() {
             </p>
           )}
 
-          {(g.player || (g.prev && (g.prev.commits > 0 || g.entryPrev?.committed))) && (
-            <div className="mt-6 space-y-5">
-              {g.player && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-board-line pt-5">
-                  <Streak player={g.player} config={cfg} />
-                  <span className="font-mono text-xs text-dim">
-                    {g.player.streak}/{cfg.streak_target} toward a {fmtNear(cfg.streak_bonus)} NEAR bonus
-                  </span>
+          {g.prev && (g.prev.commits > 0 || g.entryPrev?.committed) && (
+            <div className="mt-6">
+              <Opening round={g.prev} entry={g.entryPrev} salt={g.prevSalt} opening={busy === "Opening yesterday's vote"} ms={msLeft} />
+              {g.entryPrev?.committed && (
+                <div className="mt-4 text-center">
+                  <Journey stage={2} ms={msLeft} label={`Your vote in round ${g.prev.id}`} />
                 </div>
-              )}
-              {g.prev && (g.prev.commits > 0 || g.entryPrev?.committed) && (
-                <Yesterday round={g.prev} entry={g.entryPrev} salt={g.prevSalt} opening={busy === "Opening yesterday's vote"} />
               )}
             </div>
           )}
         </section>
 
         <RecentRounds rounds={g.recent} />
+        <WatchRound />
         {/* Section numbers follow what is on the page: "Recent rounds" only shows once a round has been played. */}
         <HowItWorks config={cfg} n={g.recent.length ? "03" : "02"} />
         <Payouts config={cfg} n={g.recent.length ? "04" : "03"} />

@@ -63,10 +63,13 @@ export function ResultCard({ item, round, stake, onClose }: { item: ClaimItem; r
             {item.bonus !== "0" && <span className="text-odd"> · streak bonus {fmtNear(item.bonus)}</span>}
             {" · "}streak {item.streak}
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <button onClick={() => shareCard(item, round)} className="flex-1 rounded-full border border-board-line px-4 py-3 font-bold hover:border-chalk">
-              Share
+              Save card
             </button>
+            <a href={postUrl(item, round)} target="_blank" rel="noreferrer" className="flex-1 rounded-full border border-board-line px-4 py-3 text-center font-bold hover:border-chalk">
+              Post on X
+            </a>
             <button onClick={onClose} className="flex-1 rounded-full bg-chalk text-board px-4 py-3 font-bold">
               Continue
             </button>
@@ -75,6 +78,20 @@ export function ResultCard({ item, round, stake, onClose }: { item: ClaimItem; r
       </div>
     </div>
   );
+}
+
+/** A ready-to-post line about this round, opened in X's composer. */
+function postUrl(item: ClaimItem, round: RoundView) {
+  const small = Math.min(round.revealed_a, round.revealed_b);
+  const big = Math.max(round.revealed_a, round.revealed_b);
+  const line =
+    item.result === "Win"
+      ? `I was the odd one in. "${round.question.text}" split ${small} to ${big}, and I picked the smaller side.`
+      : item.result === "Lose"
+        ? `I went with the crowd. "${round.question.text}" split ${small} to ${big}, and the smaller side won.`
+        : `"${round.question.text}" had no smaller side this round.`;
+  const text = `${line}\n\nOdd One In, round ${item.round_id}, on @NEARProtocol testnet`;
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://odd-one-in-zeta.vercel.app")}`;
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
