@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  /* page */
+  --color-paper: #f4f2ec;
+  --color-paper-2: #ebe8e0;
+  --color-rule: #d8d4c9;
+  --color-ink: #0e0e10;
+  --color-ink-2: #55555e;
+  /* the board (dark game panel) */
+  --color-board: #111114;
+  --color-board-2: #1b1b20;
+  --color-board-line: #2b2b32;
+  --color-chalk: #f5f2ea;
+  --color-dim: #8a8a94;
+  /* the two sides and the odd one in */
+  --color-side-a: #ff5a3c;
+  --color-side-b: #3cc8ff;
+  --color-odd: #c8ff3c;
+  --color-alert: #c9362a;
+
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  /* faint paper grain */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.05 0 0 0 0 0.06 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+
+/* A word circled by hand, like marking the odd one out on a sheet. */
+.circled { position: relative; display: inline-block; z-index: 0; }
+.circled > svg { position: absolute; left: -9%; top: -16%; width: 120%; height: 132%; z-index: -1; overflow: visible; }
+.circled path { stroke-dasharray: 900; stroke-dashoffset: 900; animation: draw 900ms 350ms cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* A scribbled underline for section headings. */
+.scrawl { position: relative; display: inline-block; z-index: 0; }
+.scrawl > svg { position: absolute; left: -3%; bottom: -0.2em; width: 106%; height: 0.42em; z-index: -1; overflow: visible; }
+
+/* Ballot-stub label: number, perforation, title. */
+.stub {
+  display: inline-flex; align-items: stretch;
+  border: 1.5px solid var(--color-ink); border-radius: 6px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.stub > span { padding: 5px 10px; }
+.stub > span + span { border-left: 1.5px dashed var(--color-ink); }
+
+/* Explainer stage */
+.tok { transition: transform 900ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity 500ms ease; }
+.tok-fill { transition: opacity 450ms ease, fill 450ms ease; }
+.stamp { transition: transform 380ms cubic-bezier(0.3, 1.6, 0.5, 1), opacity 200ms ease; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-side-b);
+  outline-offset: 3px;
+}
+
+/* Sealing: the chosen half folds into an envelope. */
+@keyframes seal-fold {
+  0% { transform: perspective(900px) rotateX(0) scale(1); }
+  55% { transform: perspective(900px) rotateX(65deg) scale(0.75); }
+  100% { transform: perspective(900px) rotateX(0) scale(1); }
+}
+.animate-seal { animation: seal-fold 700ms cubic-bezier(0.3, 0.7, 0.2, 1) both; }
+@keyframes flap { from { transform: rotateX(180deg); } to { transform: rotateX(0); } }
+.animate-flap { transform-origin: top; animation: flap 500ms 400ms ease-out both; }
+
+/* Result bars grow from zero over ~1.2 s. */
+.bar { transition: width 1200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Hero crowd: dots glide from a mixed crowd into two groups. */
+.dot { transition: transform 1400ms cubic-bezier(0.2, 0.8, 0.2, 1), fill 600ms ease 900ms; }
+
+@keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.live-dot { animation: live 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-seal, .animate-flap, .live-dot { animation: none; }
+  .bar, .dot, .tok, .tok-fill, .stamp { transition: none; }
+  .circled path { animation: none; stroke-dashoffset: 0; }
+}
+
+.stub-dark { border-color: rgba(245, 242, 234, 0.55); }
+.stub-dark > span + span { border-left-color: rgba(245, 242, 234, 0.55); }

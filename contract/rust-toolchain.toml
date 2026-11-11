@@ -1,0 +1,5 @@
+# Pinned for this contract only (near-sdk 5.30 needs Rust 1.95); the rest of the machine keeps its default.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

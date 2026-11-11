@@ -1,0 +1,9 @@
+contract/target/
+node_modules/
+web/dist/
+.env
+.env.local
+.keys/
+.contract-keys/
+scripts/salts*.json
+.DS_Store

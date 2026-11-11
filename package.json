@@ -1,0 +1,18 @@
+{
+  "name": "odd-one-in-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:contract": "cd contract && cargo near build non-reproducible-wasm",
+    "test:contract": "cd contract && cargo test",
+    "deploy": "tsx --env-file=.env scripts/deploy.ts",
+    "seed": "tsx --env-file=.env scripts/seed.ts",
+    "house": "tsx --env-file-if-exists=.env scripts/house.ts"
+  },
+  "devDependencies": {
+    "near-api-js": "^7.4.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  }
+}
