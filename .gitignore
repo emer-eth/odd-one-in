@@ -8,3 +8,9 @@ web/dist/
 scripts/salts*.json
 .DS_Store
 .house-state.json
+demo-video/node_modules/
+demo-video/frames/
+demo-video/build/
+demo-video/vo/
+demo-video/*.mp4
+demo-video/voice/

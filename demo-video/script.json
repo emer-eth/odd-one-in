@@ -1,0 +1,12 @@
+[
+  {"id":"o01","tag":"Odd One In","cap":"One question, two answers. The smaller crowd wins.","vo":"This is Odd One In, a minority game on NEAR. One question, two answers. Everyone picks in secret, and the smaller crowd wins."},
+  {"id":"o02","tag":"The regulars","cap":"House players with their own wallets, and habits you can read","vo":"You're not guessing blind. The regulars at the table are house players with their own wallets, and each one has a public habit. Tap one to see which way they lean, and why."},
+  {"id":"o03","tag":"Practice round","cap":"The whole loop in ten seconds, nothing on chain","vo":"They keep to that habit four rounds in five. A practice round shows the whole game in ten seconds."},
+  {"id":"o04","tag":"Play for real","cap":"No wallet: a free testnet account, sealed on chain in seconds","vo":"For a real round, tap an answer and seal it. There's no wallet to connect. The app makes a free testnet account and seals your pick on chain."},
+  {"id":"o05","tag":"Sealed","cap":"The regulars join. Nobody can see anyone's side.","vo":"The regulars join with sealed picks of their own. Nobody can see anyone's side, not even the contract owner."},
+  {"id":"o06","tag":"Opened","cap":"Next round, every pick opens and the smaller crowd is ringed","vo":"In the next round, the picks open. Each one walks to its side, and the smaller crowd gets the ring."},
+  {"id":"o07","tag":"Result","cap":"The contract pays the smaller side","vo":"One round later the contract pays the smaller side, and your result arrives."},
+  {"id":"o08","tag":"Records","cap":"Wins, losses, and how often each regular kept to habit","vo":"Every regular builds a record: wins, losses, and how often they kept to their habit. And any finished round can be replayed."},
+  {"id":"o09","tag":"Check it yourself","cap":"npm run judge rechecks every claim against the live contract","vo":"None of this asks for trust. One command rechecks every claim against the live contract, and recomputes every lean."},
+  {"id":"o10","vo":"Odd One In. Live on NEAR testnet. Go be the odd one in."}
+]

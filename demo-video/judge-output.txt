@@ -1,0 +1,30 @@
+
+Contract ooi.yourname-swarm.testnet
+  ✅ answers on testnet  (3-minute rounds, stake 0.1, bond 0.1, fee 2%)
+  ✅ streak bonus is below the cost of forcing a streak with many wallets  (0.2 < 0.254 NEAR)
+  ✅ streak pot is within its cap  (2 of 2 NEAR)
+  ✅ rounds have been played  (6 recent rounds with votes, latest 1520)
+  ✅ every recent round was won by the smaller side (or void on a tie or an empty side)  (6 decided, 0 void)
+  ✅ the contract holds at least what it owes players, the pot and fees  (holds 18.4085, owes 15.47 NEAR)
+
+House service https://house-production-5c51fa04.up.railway.app
+  ✅ service is up and following the chain  (on round 1533, chain is on 1533)
+  ✅ guest accounts are open (play with no wallet)  (1 of 40 made today, fund 14.4300 NEAR)
+
+The regulars (NPCs with wallets)
+  ✅ 8 regulars, each a separate testnet account  (Mabel, Otis, Bea, Zig, Rex, Tess, Penny, Sage)
+  ✅ their game balances on chain match what the service reports  (6.052 NEAR in the game between them)
+  ✅ this round's leans follow the published habits  (round 1533: mabel A, penny coin, otis A, bea B)
+  ✅ results the service reports match the chain  (2 rounds compared)
+  ✅ past leans follow the published habits  (9 leans recomputed over 2 rounds)
+  ➖ regulars keep to their habit about 80% of the time  (8 of 9 so far: too few to judge)
+  ➖ picks being opened now match the chain  (the regulars aren't in the round being opened: they join when someone plays)
+
+Web app https://odd-one-in-zeta.vercel.app
+  ✅ the live app talks to this contract
+  ✅ the live app offers guest play through this service
+
+  (add `-- --play` to also play one whole round from a fresh guest account: 6 to 9 minutes)
+
+✅ all checks passed, 2 skipped (nothing to check yet)
+
