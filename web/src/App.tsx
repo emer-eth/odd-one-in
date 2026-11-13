@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { WatchRound } from "./components/Hero";
 import { BalanceChip, Countdown, Streak } from "./components/Panels";
 import { CrowdField, Journey } from "./components/Round";
-import { Fairness, Footer, HowItWorks, Logo, Payouts, RecentRounds } from "./components/Sections";
+import { Fairness, Footer, HowItWorks, Label, Logo, Payouts, RecentRounds, Scrawl } from "./components/Sections";
 import { ResultCard } from "./components/ResultCard";
+import { Dossier, Leaning, RegularsSection } from "./components/Regulars";
+import { Practice, Replay } from "./components/Playback";
+import { tableFor, useRegulars, type PastTable } from "./lib/useRegulars";
 import { commitHash, deleteSalt, loadSalt, newSalt, readableError, saveSalt } from "./lib/game";
 import {
   GUEST_API,
@@ -45,6 +48,10 @@ export default function App() {
   const autoTried = useRef(new Set<string>());
   const [depositSignal, setDepositSignal] = useState(0);
   const [nudge, setNudge] = useState(0);
+  const regs = useRegulars(g.cur?.id);
+  const [dossier, setDossier] = useState<string | null>(null);
+  const [replay, setReplay] = useState<PastTable | null>(null);
+  const [practice, setPractice] = useState(false);
   useEffect(() => {
     if (!nudge) return;
     g.refresh();
@@ -283,6 +290,19 @@ export default function App() {
   const needsDeposit = account && !committed && balance < cost;
   const needsKey = account && g.player && g.keyActive === false;
   const canPick = !committed && !busy;
+  const table = tableFor(regs, cur.id);
+  // The crowd picture: the round being opened now, or else the last one that finished, with the regulars' initials.
+  const shown = g.prev && g.prev.commits > 0 ? g.prev : g.recent[0] ?? null;
+  const shownPicks = shown ? (regs?.opening?.id === shown.id ? regs.opening.picks : regs?.rounds.find((r) => r.id === shown.id)?.picks) : undefined;
+  const nameOf = (id: string) => regs?.regulars.find((r) => r.id === id)?.name ?? id;
+  const shownNames = shownPicks
+    ? { A: Object.keys(shownPicks).filter((id) => shownPicks[id] === "A").map(nameOf), B: Object.keys(shownPicks).filter((id) => shownPicks[id] === "B").map(nameOf) }
+    : undefined;
+  /** A finished round to replay: with the regulars' picks when the house service has them, else counts only. */
+  const openReplay = (r: RoundView) =>
+    setReplay(regs?.rounds.find((x) => x.id === r.id) ?? { id: r.id, result: r.outcome ?? "Void", a: r.revealed_a, b: r.revealed_b, commits: r.commits, question: r.question, picks: {}, leans: {} });
+  let section = 1;
+  const num = () => String(++section).padStart(2, "0");
 
   return (
     <>
@@ -293,6 +313,7 @@ export default function App() {
           </a>
           <div className="hidden items-center gap-7 text-sm text-ink-2 md:flex">
             <a href="#play" className="hover:text-ink">Play</a>
+            {regs && <a href="#regulars" className="hover:text-ink">The regulars</a>}
             <a href="#how" className="hover:text-ink">How it works</a>
             <a href="#payouts" className="hover:text-ink">Payouts</a>
             <a href="#fair" className="hover:text-ink">Fair play</a>
@@ -321,8 +342,8 @@ export default function App() {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
-        <section id="play" aria-label="This round" className="grid gap-10 pt-8 pb-10 text-chalk lg:grid-cols-2 lg:gap-12 lg:pt-12">
-          <div>
+        <section id="play" aria-label="This round" className="pt-8 pb-10 text-chalk lg:pt-12">
+          <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
             <p className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs uppercase tracking-widest text-odd">
               <span className="flex items-center gap-2">
                 <span className="live-dot h-2 w-2 rounded-full bg-odd" />
@@ -335,44 +356,156 @@ export default function App() {
                 </span>
               </span>
             </p>
-            <h1 className="display mt-4 text-[2rem] font-extrabold text-chalk sm:text-5xl">{cur.question.text}</h1>
-            <p className="mt-4 max-w-md text-[17px] leading-relaxed text-dim">
-              Everyone picks in secret. When the picks are opened, <span className="text-chalk">the smaller crowd wins</span>. Be the odd one in.
-            </p>
+            <dl className="flex flex-wrap gap-x-8 gap-y-2 font-mono text-xs uppercase tracking-widest text-dim">
+              <div className="flex items-baseline gap-2">
+                <dt>Sealed</dt>
+                <dd className="text-base text-chalk">{cur.commits}</dd>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <dt>Streak pot</dt>
+                <dd className="text-base normal-case text-chalk">{fmtNear(g.pot)} NEAR</dd>
+              </div>
+              {g.player && (
+                <div className="flex items-baseline gap-2" title={`Win ${cfg.streak_target} in a row for a ${fmtNear(cfg.streak_bonus)} NEAR bonus`}>
+                  <dt>Your streak</dt>
+                  <dd className="text-base text-chalk">
+                    {g.player.streak}<span className="text-dim">/{cfg.streak_target}</span>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
 
-            <div aria-live="polite" className="mt-5 space-y-2 empty:hidden">
-              {busy && <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">⏳ {busy}…</p>}
-              {error && (
-                <p className="rounded-xl border border-side-a/40 bg-side-a/10 px-4 py-3 text-sm">
-                  {error}{" "}
-                  <button className="ml-2 underline" onClick={() => setError(null)}>
-                    Dismiss
+          <h1 className="display mt-5 max-w-4xl text-[2rem] font-extrabold text-chalk sm:text-5xl lg:text-[3.5rem]">{cur.question.text}</h1>
+          <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-dim">
+            Everyone picks in secret. When the picks are opened, <span className="text-chalk">the smaller crowd wins</span>.{" "}
+            {table ? "The regulars at the table each have a habit: see which way they lean, then be the odd one in." : "Be the odd one in."}
+          </p>
+
+          <div aria-live="polite" className="mt-5 max-w-2xl space-y-2 empty:hidden">
+            {busy && <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">⏳ {busy}…</p>}
+            {error && (
+              <p className="rounded-xl border border-side-a/40 bg-side-a/10 px-4 py-3 text-sm">
+                {error}{" "}
+                <button className="ml-2 underline" onClick={() => setError(null)}>
+                  Dismiss
+                </button>
+              </p>
+            )}
+            {needsDeposit && !busy && (
+              <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
+                Add at least {fmtNear(cost + (g.player ? 0n : BigInt(cfg.storage_fee)))} NEAR to play.{" "}
+                <button onClick={() => setDepositSignal((n) => n + 1)} className="font-semibold underline">
+                  Deposit
+                </button>{" "}
+                — your wallet asks once, then play needs no popups.
+              </p>
+            )}
+            {needsKey && !needsDeposit && !busy && (
+              <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
+                One-tap play isn&apos;t set up in this browser.{" "}
+                <button onClick={enable} className="font-semibold underline">
+                  Enable it
+                </button>{" "}
+                (one wallet approval; the key can only call this game).
+              </p>
+            )}
+          </div>
+
+          {/* The room: two answers, and under each one the regulars who lean that way. */}
+          <div className="mt-7 grid grid-cols-2 gap-2.5 sm:gap-4">
+            {(["A", "B"] as const).map((side) => {
+              const label = side === "A" ? cur.question.a : cur.question.b;
+              const isSel = selected === side;
+              const isMine = committed && myCurChoice === side;
+              const dim = (selected && !isSel) || (committed && myCurChoice && !isMine);
+              const leaners = table?.filter((s) => s.lean === side) ?? [];
+              return (
+                <div key={side} className="flex flex-col gap-3">
+                  <button
+                    disabled={!canPick}
+                    onClick={() => (account || guestOn ? setSelected(isSel ? null : side) : connect())}
+                    aria-pressed={isSel}
+                    className={`relative flex min-h-[132px] flex-col justify-between rounded-3xl p-4 text-left transition duration-200 sm:min-h-[168px] sm:p-5 ${side === "A" ? "bg-side-a text-night" : "bg-side-b text-white"} ${
+                      dim ? "opacity-30" : canPick ? "hover:-translate-y-0.5" : ""
+                    } ${isSel ? "ring-4 ring-odd ring-offset-4 ring-offset-paper" : ""} ${isMine && justSealed ? "animate-seal" : ""} disabled:cursor-not-allowed`}
+                  >
+                    <span className="font-mono text-[11px] tracking-widest opacity-80 sm:text-xs">{isMine ? "YOUR PICK · SEALED" : isSel ? "SELECTED" : `PICK ${side === "A" ? "ORANGE" : "VIOLET"}`}</span>
+                    <span className="display break-words text-lg font-extrabold sm:text-[1.9rem]">{label}</span>
                   </button>
-                </p>
+                  {table && regs && (
+                    <div className="min-h-[104px] rounded-2xl border border-board-line bg-board/70 px-3 py-3.5 sm:px-4">
+                      <p className="font-mono text-[11px] uppercase tracking-widest text-dim">
+                        Leaning <span className={side === "A" ? "text-side-a" : "text-side-b"}>{side === "A" ? "orange" : "violet"}</span> · {leaners.length}
+                      </p>
+                      <div className="mt-3">
+                        {leaners.length || isMine ? <Leaning seats={leaners} regs={regs} onOpen={setDossier} you={isMine} /> : <p className="py-3 text-sm text-dim">Nobody at the table leans this way.</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {table && regs && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-board-line bg-board/70 px-4 py-3.5">
+              {table.some((s) => s.lean === null) && (
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-dim">No habit</span>
+                  <Leaning seats={table.filter((s) => s.lean === null)} regs={regs} onOpen={setDossier} />
+                </div>
               )}
-              {needsDeposit && !busy && (
-                <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
-                  Add at least {fmtNear(cost + (g.player ? 0n : BigInt(cfg.storage_fee)))} NEAR to play.{" "}
-                  <button onClick={() => setDepositSignal((n) => n + 1)} className="font-semibold underline">
-                    Deposit
-                  </button>{" "}
-                  — your wallet asks once, then play needs no popups.
-                </p>
-              )}
-              {needsKey && !needsDeposit && !busy && (
-                <p className="rounded-xl bg-board-2 px-4 py-3 text-sm">
-                  One-tap play isn&apos;t set up in this browser.{" "}
-                  <button onClick={enable} className="font-semibold underline">
-                    Enable it
-                  </button>{" "}
-                  (one wallet approval; the key can only call this game).
-                </p>
-              )}
+              <p className="min-w-[14rem] flex-1 text-sm text-dim">
+                Each regular keeps to their habit about {Math.round(regs.follow * 5)} rounds in 5 and breaks it the rest. Tap one to see why they lean that way.
+              </p>
+              <button onClick={() => setPractice(true)} className="rounded-full border border-board-line px-4 py-2 text-sm text-chalk hover:border-chalk">
+                ▶ Practice round · 10 seconds
+              </button>
             </div>
+          )}
 
-            <div className="mt-6">
+          {selected && !committed && (
+            <div className="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-board-line bg-board-2/95 p-3 pl-5 backdrop-blur">
+              <p className="flex-1 text-sm text-dim">
+                Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} {account ? "NEAR" : "test NEAR, on us"} (bond{" "}
+                {fmtNear(cfg.bond)} returns when opened)
+                <span className="mt-1 block text-xs">
+                  It must be opened {openWindow}. This tab does it for you if it stays open; unopened picks lose stake and bond.
+                </span>
+              </p>
+              <button
+                onClick={!account ? playAsGuest : needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
+                disabled={!!busy}
+                className="rounded-full bg-odd px-6 py-3 font-semibold text-night disabled:opacity-40"
+              >
+                {!account ? "Seal my pick" : needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal my pick"}
+              </button>
+            </div>
+          )}
+
+          {!account &&
+            (guestOn ? (
+              <p className="mt-4 text-sm text-dim">
+                No wallet needed: tap an answer and you get a free guest account with test NEAR. Or{" "}
+                <button className="underline" onClick={connect}>
+                  connect a NEAR testnet wallet
+                </button>
+                .
+              </p>
+            ) : (
+              <p className="mt-4 text-sm text-dim">
+                Tap an answer to connect a NEAR testnet wallet.{" "}
+                <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
+                  Need one?
+                </a>
+              </p>
+            ))}
+
+          {/* Below the room: where your pick is on its way, and the last crowd to be opened. */}
+          <div className="mt-10 grid gap-8 lg:grid-cols-2 lg:gap-12">
+            <div className="space-y-4">
               {committed ? (
-                <div className={`rounded-3xl border border-board-line bg-board-2 p-6 ${justSealed ? "animate-seal" : ""}`}>
+                <div className="rounded-3xl border border-board-line bg-board-2 p-6">
                   <div className="flex items-center gap-5">
                     <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-full font-mono text-[11px] tracking-widest ${myCurChoice === "A" ? "bg-side-a text-night" : myCurChoice === "B" ? "bg-side-b text-white" : "bg-board-line text-dim"}`}>
                       SEALED
@@ -394,124 +527,73 @@ export default function App() {
                   {warnStorage && <p className="mt-2 text-sm text-side-a">Clearing this browser&apos;s data before then loses the pick.</p>}
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(["A", "B"] as const).map((side) => {
-                    const label = side === "A" ? cur.question.a : cur.question.b;
-                    const isSel = selected === side;
-                    const dim = selected && !isSel;
-                    return (
-                      <button
-                        key={side}
-                        disabled={!canPick}
-                        onClick={() => (account || guestOn ? setSelected(isSel ? null : side) : connect())}
-                        aria-pressed={isSel}
-                        className={`relative flex min-h-[150px] flex-col justify-between rounded-3xl p-5 text-left transition duration-200 sm:min-h-[190px] ${side === "A" ? "bg-side-a text-night" : "bg-side-b text-white"} ${
-                          dim ? "opacity-30" : "hover:-translate-y-0.5"
-                        } ${isSel ? "ring-4 ring-odd ring-offset-4 ring-offset-paper" : ""} disabled:cursor-not-allowed`}
-                      >
-                        <span className="font-mono text-xs tracking-widest opacity-80">{isSel ? "SELECTED" : `PICK ${side}`}</span>
-                        <span className="display text-2xl font-extrabold sm:text-[1.7rem]">{label}</span>
-                      </button>
-                    );
-                  })}
+                <div className="rounded-3xl border border-board-line bg-board-2 p-6">
+                  <p className="font-mono text-[11px] uppercase tracking-widest text-dim">How a pick travels</p>
+                  <ol className="mt-4 space-y-3.5">
+                    {[
+                      ["Seal", `Pick a side before this round closes. It costs ${fmtNear(cost)} NEAR; ${fmtNear(cfg.bond)} of that is a bond you get back.`],
+                      ["Open", `Next round (${openWindow}) this tab opens your pick and the crowd shows its sides.`],
+                      ["Result", `The round after, the smaller side is paid: +${fmtNear(BigInt(cfg.stake) - (BigInt(cfg.stake) * BigInt(cfg.fee_bps)) / 10_000n)} NEAR if that's you.`],
+                    ].map(([t, d], i) => (
+                      <li key={t} className="grid grid-cols-[2.25rem_1fr] gap-x-3">
+                        <span className="font-mono text-sm text-odd">0{i + 1}</span>
+                        <span>
+                          <span className="font-semibold">{t}.</span> <span className="text-dim">{d}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  {table && regs && (
+                    <p className="mt-5 border-t border-board-line pt-4 text-sm text-dim">
+                      Rounds take {roundMinutes} minutes each way.{" "}
+                      <button className="text-chalk underline underline-offset-4" onClick={() => setPractice(true)}>
+                        Run a practice round
+                      </button>{" "}
+                      against this table to see the whole thing in 10 seconds.
+                    </p>
+                  )}
+                </div>
+              )}
+              {g.prev && g.entryPrev?.committed && (
+                <div className="rounded-2xl border border-board-line bg-board-2 p-5">
+                  <Journey stage={2} ms={msLeft} label={`Your pick in round ${g.prev.id}`} />
+                  <p className={`mt-3 text-sm ${!g.entryPrev.revealed && !g.prevSalt ? "text-side-a" : "text-dim"}`}>
+                    {g.entryPrev.revealed
+                      ? `Your pick is open: ${g.entryPrev.revealed === "A" ? g.prev.question.a : g.prev.question.b}.`
+                      : busy === "Opening yesterday's vote"
+                        ? "Opening your pick…"
+                        : g.prevSalt
+                          ? "Your pick is waiting to be opened."
+                          : "This pick was sealed on another device, or this browser's data was cleared, so it can't be opened here. Unopened picks lose stake and bond."}
+                  </p>
+                </div>
+              )}
+              {g.player && (
+                <div className="px-1">
+                  <Streak player={g.player} config={cfg} />
                 </div>
               )}
             </div>
 
-            {selected && !committed && (
-              <div className="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-board-line bg-board-2/95 p-3 pl-5 backdrop-blur">
-                <p className="flex-1 text-sm text-dim">
-                  Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} {account ? "NEAR" : "test NEAR, on us"} (bond{" "}
-                  {fmtNear(cfg.bond)} returns when opened)
-                  <span className="mt-1 block text-xs">
-                    It must be opened {openWindow}. This tab does it for you if it stays open; unopened picks lose stake and bond.
-                  </span>
-                </p>
-                <button
-                  onClick={!account ? playAsGuest : needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
-                  disabled={!!busy}
-                  className="rounded-full bg-odd px-6 py-3 font-semibold text-night disabled:opacity-40"
-                >
-                  {!account ? "Seal my pick" : needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal my pick"}
-                </button>
-              </div>
-            )}
-
-            {!account &&
-              (guestOn ? (
-                <p className="mt-4 text-sm text-dim">
-                  No wallet needed: tap an answer and you get a free guest account with test NEAR. Or{" "}
-                  <button className="underline" onClick={connect}>
-                    connect a NEAR testnet wallet
-                  </button>
-                  .
-                </p>
-              ) : (
-                <p className="mt-4 text-sm text-dim">
-                  Tap an answer to connect a NEAR testnet wallet.{" "}
-                  <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
-                    Need one?
-                  </a>
-                </p>
-              ))}
-
-            <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 font-mono text-xs uppercase tracking-widest text-dim">
-              <div>
-                <dt>Sealed</dt>
-                <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">{cur.commits}</dd>
-              </div>
-              <div>
-                <dt>Streak pot</dt>
-                <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">{fmtNear(g.pot)} <span className="text-base text-dim">NEAR</span></dd>
-              </div>
-              {g.player && (
-                <div title={`Win ${cfg.streak_target} in a row for a ${fmtNear(cfg.streak_bonus)} NEAR bonus`}>
-                  <dt>Your streak</dt>
-                  <dd className="display mt-1 text-2xl font-extrabold normal-case tracking-normal text-chalk">
-                    {g.player.streak} <span className="text-base text-dim">/ {cfg.streak_target}</span>
-                  </dd>
-                </div>
-              )}
-            </dl>
-            {g.player && (
-              <div className="mt-4">
-                <Streak player={g.player} config={cfg} />
-              </div>
-            )}
-          </div>
-
-          <div className="lg:sticky lg:top-20 lg:self-start">
-            <CrowdField
-              round={g.prev && g.prev.commits > 0 ? g.prev : g.recent[0] ?? null}
-              ms={msLeft}
-              sealedNow={cur.commits}
-              mine={g.prev && g.prev.commits > 0 ? g.entryPrev?.revealed ?? null : null}
-            />
-            {g.prev && g.entryPrev?.committed && (
-              <div className="mt-4 rounded-2xl border border-board-line bg-board-2 p-5">
-                <Journey stage={2} ms={msLeft} label={`Your pick in round ${g.prev.id}`} />
-                <p className={`mt-3 text-sm ${!g.entryPrev.revealed && !g.prevSalt ? "text-side-a" : "text-dim"}`}>
-                  {g.entryPrev.revealed
-                    ? `Your pick is open: ${g.entryPrev.revealed === "A" ? g.prev.question.a : g.prev.question.b}.`
-                    : busy === "Opening yesterday's vote"
-                      ? "Opening your pick…"
-                      : g.prevSalt
-                        ? "Your pick is waiting to be opened."
-                        : "This pick was sealed on another device, or this browser's data was cleared, so it can't be opened here. Unopened picks lose stake and bond."}
-                </p>
-              </div>
-            )}
+            <CrowdField round={shown} ms={msLeft} sealedNow={cur.commits} mine={g.prev && g.prev.commits > 0 ? g.entryPrev?.revealed ?? null : null} names={shownNames} />
           </div>
         </section>
 
-        <RecentRounds rounds={g.recent} />
+        {regs && regs.regulars.length > 0 && (
+          <RegularsSection regs={regs} n={num()} onOpen={setDossier} label={(n, t) => <Label n={n}>{t}</Label>} scrawl={(t) => <Scrawl>{t}</Scrawl>} />
+        )}
+        <RecentRounds rounds={g.recent} n={g.recent.length ? num() : ""} onReplay={openReplay} />
         <WatchRound />
-        {/* Section numbers follow what is on the page: "Recent rounds" only shows once a round has been played. */}
-        <HowItWorks config={cfg} n={g.recent.length ? "03" : "02"} />
-        <Payouts config={cfg} n={g.recent.length ? "04" : "03"} />
-        <Fairness config={cfg} pot={g.pot} n={g.recent.length ? "05" : "04"} />
+        {/* Section numbers follow what is on the page: some sections only show once there is something in them. */}
+        <HowItWorks config={cfg} n={num()} />
+        <Payouts config={cfg} n={num()} />
+        <Fairness config={cfg} pot={g.pot} n={num()} />
         <Footer />
       </main>
+
+      {dossier && regs && <Dossier id={dossier} regs={regs} onClose={() => setDossier(null)} />}
+      {replay && <Replay round={replay} regs={regs} config={cfg} onClose={() => setReplay(null)} />}
+      {practice && table && regs && <Practice question={cur.question} table={table} regs={regs} config={cfg} onClose={() => setPractice(false)} />}
 
       {results[0] && (
         <ResultCard key={results[0].item.round_id} item={results[0].item} round={results[0].round} stake={cfg.stake} onClose={() => setResults((r) => r.slice(1))} />

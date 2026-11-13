@@ -120,7 +120,7 @@ async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
 }
 
 /** Starts the guest API. `houseInfo` adds the house players' state to /health. */
-export function startGuestServer(houseInfo: () => Record<string, unknown> = () => ({})) {
+export function startGuestServer(houseInfo: () => Record<string, unknown> = () => ({}), regularsInfo: (() => unknown) | null = null, stateInfo: (() => unknown) | null = null) {
   const funder = guestFunder();
   const port = Number(process.env.PORT || 8787);
   createServer(async (req, res) => {
@@ -133,6 +133,9 @@ export function startGuestServer(houseInfo: () => Record<string, unknown> = () =
         const balance = funder ? fmt((await provider().viewAccount({ accountId: funder.accountId })).amount).slice(0, 7) : null;
         return send(res, origin, 200, { ok: true, contract: contractId(), guests: funder ? { open: true, grant: fmt(GRANT), madeToday, dailyLimit: DAILY, funder: funder.accountId, funderBalance: balance } : { open: false }, house: houseInfo() });
       }
+      // The regulars: who is at the table, which way each leans and their records (scripts/house.ts).
+      if (req.method === "GET" && path === "/regulars" && regularsInfo) return send(res, origin, 200, regularsInfo());
+      if (req.method === "GET" && path === "/state" && stateInfo) return send(res, origin, 200, stateInfo());
       if (req.method === "POST" && path === "/guest") {
         if (!funder) throw new Refusal(503, "Guest accounts aren't switched on.");
         if (origin && !ORIGINS.includes(origin)) throw new Refusal(403, "Not allowed from this site.");

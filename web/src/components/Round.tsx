@@ -35,9 +35,11 @@ type Props = {
   sealedNow: number;
   /** The viewer's own opened pick in `round`, to outline their circle. */
   mine: "A" | "B" | null;
+  /** Regulars known to be on each side, to put their initial on a circle. */
+  names?: { A: string[]; B: string[] };
 };
 
-export function CrowdField({ round, ms, sealedNow, mine }: Props) {
+export function CrowdField({ round, ms, sealedNow, mine, names }: Props) {
   const opening = round?.phase === "Reveal";
   const a = round?.revealed_a ?? 0;
   const b = round?.revealed_b ?? 0;
@@ -87,10 +89,16 @@ export function CrowdField({ round, ms, sealedNow, mine }: Props) {
             <g key={`${side}${i}`} className="crowd-dot" style={{ transform: `translate(${x}px, ${y}px)` }}>
               <g className="crowd-drift" style={{ animationDelay: `${-((i * 37 + (side === "A" ? 0 : 19)) % 60) / 10}s` }}>
                 <circle r={r} fill={side === "A" ? "var(--color-side-a)" : "var(--color-side-b)"} stroke={mine === side && i === 0 ? "var(--color-chalk)" : "none"} strokeWidth={3} opacity={!opening && small && small !== side ? 0.55 : 1} />
-                {mine === side && i === 0 && (
+                {mine === side && i === 0 ? (
                   <text textAnchor="middle" y={4} fontSize={11} fontFamily="DM Mono, monospace" fontWeight={500} fill={side === "A" ? "var(--color-night)" : "#fff"}>
                     YOU
                   </text>
+                ) : (
+                  names?.[side][i - (mine === side ? 1 : 0)] && (
+                    <text textAnchor="middle" y={r * 0.2} fontSize={Math.max(12, r * 0.55)} fontFamily="DM Mono, monospace" fontWeight={500} fill={side === "A" ? "var(--color-night)" : "#fff"}>
+                      {names[side][i - (mine === side ? 1 : 0)][0]}
+                    </text>
+                  )
                 )}
               </g>
             </g>

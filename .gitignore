@@ -7,3 +7,4 @@ web/dist/
 .contract-keys/
 scripts/salts*.json
 .DS_Store
+.house-state.json

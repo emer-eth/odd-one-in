@@ -1,7 +1,7 @@
 import { CONTRACT_ID, EXPLORER, fmtNear, type Config, type RoundView } from "../lib/near";
 import { Stamp, Tally } from "./Explainer";
 
-function Label({ n, children }: { n: string; children: React.ReactNode }) {
+export function Label({ n, children }: { n: string; children: React.ReactNode }) {
   return (
     <span className="stub">
       <span>No. {n}</span>
@@ -11,7 +11,7 @@ function Label({ n, children }: { n: string; children: React.ReactNode }) {
 }
 
 /** Scribbled underline under a heading word. */
-function Scrawl({ children }: { children: React.ReactNode }) {
+export function Scrawl({ children }: { children: React.ReactNode }) {
   return (
     <span className="scrawl">
       {children}
@@ -27,18 +27,18 @@ function roundLength(config: Config) {
   return min >= 1440 ? { word: "a day", short: "24 h" } : { word: `${min} minutes`, short: `${min} min` };
 }
 
-export function RecentRounds({ rounds }: { rounds: RoundView[] }) {
+export function RecentRounds({ rounds, n, onReplay }: { rounds: RoundView[]; n: string; onReplay: (r: RoundView) => void }) {
   if (!rounds.length) return null;
   return (
     <section id="rounds" className="py-16 sm:py-20" aria-labelledby="rounds-h">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Label n="02">Recent rounds</Label>
+          <Label n={n}>Recent rounds</Label>
           <h2 id="rounds-h" className="display mt-5 text-3xl font-extrabold sm:text-4xl">
             The crowd, <Scrawl>after</Scrawl> the fact
           </h2>
         </div>
-        <p className="max-w-sm text-ink-2">Every settled round, counted the old way. The stamped answer is the one fewer people picked.</p>
+        <p className="max-w-sm text-ink-2">Every settled round, counted the old way. The stamped answer is the one fewer people picked. Replay any of them to watch the picks open.</p>
       </div>
       <div className="mt-10 grid gap-x-8 border-t border-ink sm:grid-cols-2 lg:grid-cols-4">
         {rounds.slice(0, 8).map((r) => (
@@ -63,6 +63,9 @@ export function RecentRounds({ rounds }: { rounds: RoundView[] }) {
             ) : (
               <Stamp className="mt-4 bg-odd text-night">{r.outcome === "A" ? r.question.a : r.question.b} · odd one in</Stamp>
             )}
+            <button onClick={() => onReplay(r)} className="mt-4 block font-mono text-xs uppercase tracking-widest text-ink-2 underline underline-offset-4 hover:text-ink">
+              ▶ Replay
+            </button>
           </article>
         ))}
       </div>
@@ -213,7 +216,7 @@ export function Fairness({ config, pot, n }: { config: Config; pot: string; n: s
             ],
             [
               "House players",
-              "A minority game needs a crowd, so a few house accounts join any round a person plays, and play a round of their own every couple of hours. They are ordinary accounts using the same public methods, stake and bond as you. They pick sides from a random number and can't see your vote; nobody can until it's opened.",
+              "A minority game needs a crowd, so the regulars (house accounts, each with its own wallet) join any round a person plays, and play a round of their own every couple of hours. They use the same public methods, stake and bond as you. Each one's habit reads only finished rounds, so their leans are public; a keyed coin decides the rounds they break habit. They can't see your pick: nobody can until it's opened. The repo's `npm run judge` recomputes every lean from the chain.",
             ],
             [
               "Guest accounts",

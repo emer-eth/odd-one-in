@@ -1,6 +1,9 @@
 contract/
-web/
+web/node_modules/
+web/dist/
+web/public/
 docs/
 .keys/
 .contract-keys/
 .env
+.house-state.json

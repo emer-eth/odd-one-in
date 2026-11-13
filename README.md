@@ -13,15 +13,27 @@ Track: **Games With Real Economies** (NEAR Hackathon).
 
 No wallet, no sign-up:
 
-1. Open https://odd-one-in-zeta.vercel.app. See the question, the countdown and the streak pot, read live from the contract.
-2. Tap an answer (orange or purple), then **Seal my pick**. See three short steps ("Making you a guest account", "Adding free test NEAR", "Sealing your pick"), then "Your pick is in" with a three-step tracker (Sealed, Opening, Result). This takes about 10 to 20 seconds and no wallet opens. The top bar now shows your game balance and "Guest".
-3. Within about 20 seconds the "Sealed" count rises from 1 to 5 or 7 as the house players join your round.
-4. Keep the tab open. When the next round starts (3 minutes at most), watch the crowd picture on the right: each opened pick becomes a circle in its side's colour and glides to its side, yours is marked "YOU", and the smaller crowd gets a dashed ring.
-5. One round later, see the result card: you won a stake, lost it, or the round was void, with **Save card** and **Post on X**. The crowd picture keeps the last result, and the round appears under "Recent rounds".
+1. Open https://odd-one-in-zeta.vercel.app. See the question, the countdown and two answers (orange and violet), read live from the contract. Under each answer stand the **regulars** who lean that way this round: four house players, each with a public habit. Tap one to see the habit, why it points that way now, and their record.
+2. In a hurry? Tap **Practice round · 10 seconds**. It plays this table in the browser (nothing on chain) so you see a whole round at once: picks open, the smaller crowd is ringed, and anyone who broke habit is marked.
+3. For the real thing, tap an answer, then **Seal my pick**. See three short steps ("Making you a guest account", "Adding free test NEAR", "Sealing your pick"), then "Your pick is in". This takes 10 to 20 seconds and no wallet opens. Your token now stands under your answer.
+4. Within about 20 seconds the "Sealed" count rises from 1 to 5 as the regulars join your round.
+5. Keep the tab open. When the next round starts (3 minutes at most), the crowd picture shows each opened pick as a circle in its side's colour, with the regulars' initials and yours marked "YOU". The smaller crowd gets a dashed ring.
+6. One round later, see the result card: you won a stake, lost it, or the round was void, with **Save card** and **Post on X**. The round appears under "Recent rounds", where **Replay** plays any finished round back.
 
 With your own wallet instead: tap **connect a NEAR testnet wallet** under the answers (free at https://testnet.mynearwallet.com), pick an answer and deposit 0.5 NEAR. One wallet approval deposits and adds a play key that can only call this game; after that there are no popups.
 
-Is it up? `GET <service URL>/health` (the URL is `VITE_GUEST_API` in the deployed app) reports the house players' last round and how many guest accounts are left today. No browser? `npm run test:contract` runs the unit tests, and `npm run seed -- status` reads the live contract.
+## Check it with one command
+
+```
+git clone https://github.com/emer-eth/odd-one-in && cd odd-one-in && npm install
+npm run judge
+```
+
+No keys and no `.env` needed. In about 20 seconds it reads the live contract and the house service and prints a pass or fail for each claim: recent rounds were won by the smaller side, the contract holds what it owes, the streak bonus is below the sybil bound, guest accounts are open, and every regular's lean matches its published habit (recomputed here from `web/src/lib/regulars.ts`, not taken on trust). Checks with nothing to look at yet are shown as skipped, not passed.
+
+`npm run judge -- --play` also plays one whole round from a brand-new guest account (seal, wait, open, collect) and reports the result. That takes 6 to 9 minutes because rounds are 3 minutes long.
+
+Also: `npm run test:contract` runs the contract's unit tests, and `GET <service URL>/health` reports the house players' last round and how many guest accounts are left today.
 
 ## How a round works
 
@@ -48,17 +60,30 @@ At settlement, `(M − m)·s + u·(s + bond)` goes to the **streak pot** and `m�
 
 **Worked example** (`s = 1`, `bond = 1`, `f = 2%`; 6 open on A, 8 on B, 1 never opened). A wins, and each A player is credited 1.98 (11.88 in total). Fees get 0.12 and the pot gets `2·1 + 1·2 = 4`. In: 15 stakes plus 1 forfeited bond = 16. Out: 11.88 + 0.12 + 4 = 16. This is a unit test (`worked_example`), and the seed script checks the same accounting on testnet.
 
-## House players (NPCs with wallets)
+## The regulars (NPCs with wallets)
 
-A minority game needs a crowd: alone in a round, one side has no votes and the round is void. So a small always-on script (`scripts/house.ts`, `npm run house`) runs **house players**: ordinary testnet accounts, each with its own wallet and game balance.
+A minority game needs a crowd: alone in a round, one side has no votes and the round is void. So a small always-on script (`scripts/house.ts`, `npm run house`) runs eight house players, **the regulars**. Each is an ordinary testnet account with its own wallet and game balance, and each has one public habit:
 
-- **When they play.** They join any round in which a person has sealed a vote (within about 15 seconds, if at least 25 seconds of the round are left), and they play a showcase round of their own every 40 rounds (2 hours), so "Recent rounds" always has a result.
-- **How they play.** Four or six of them seal votes split 1 to 3 or 2 to 4. A split that differs by two means one more vote on either side still leaves a winner, so a single visitor wins on one side and loses on the other: a coin flip, as the game intends. Which side is the smaller one is decided by a keyed random number per round.
+| Regular | Habit |
+|---|---|
+| Mabel | Always takes the orange side (the first answer). |
+| Otis | Takes the side that won the last round. |
+| Bea | Goes where the bigger crowd went last round. |
+| Zig | Switches sides every round they play. |
+| Rex | Stays put after a win, switches after a loss. |
+| Tess | Takes the shorter answer. |
+| Penny | Flips a coin. |
+| Sage | Works out where the others at the table lean and takes the emptier side. |
+
+- **Readable, not predictable.** A habit only reads finished, public history, so anyone can work out which way a regular leans before the round closes, and the app shows it. Each regular keeps to their habit 80% of the time (`FOLLOW` in `web/src/lib/regulars.ts`) and takes the other side the rest, decided by a keyed hash only the house process knows. So reading the table gives an edge, not a sure thing.
+- **Who sits in.** Four regulars per round (five in a showcase round), ordered by a public hash of the round number, among those who can afford the stake and bond. A regular who runs out sits out until topped up.
+- **When they play.** They join any round in which a person has sealed a vote (within about 15 seconds, if at least 25 seconds of the round are left), and they play a showcase round every 40 rounds (2 hours), so "Recent rounds" always has a result.
 - **What they can't do.** They use the same public methods as everyone (`commit`, `reveal`, `claim`), pay the same stake and bond, and can't see a visitor's vote: nobody can until it is opened. The contract has no special case for them.
-- **What it costs.** In every round they play, the house's bigger side loses more than its smaller side wins, about 0.2 NEAR a round, which goes to the streak pot and fees. `npm run house -- fund 0.6` tops them up; `npm run house -- status` shows their balances.
+- **Records.** `GET <service URL>/regulars` reports the table, each lean with its reason, and each regular's wins, losses, net and how often they kept to habit. The contract deletes a vote's entry once its round is claimed, so the house notes each regular's pick while the round is being opened (when it is readable on chain) and keeps the list; a new deployment takes it over from the one it replaces. The round habits started at is reported as `since`; earlier house rounds were split at random and don't count towards "kept to habit".
+- **What it costs.** The bigger side loses more than the smaller side wins, so the regulars as a group lose about 0.2 NEAR in a typical round, which goes to the streak pot and fees. `npm run house -- fund 0.6` tops them up (game balance and gas); `npm run house -- status` shows their balances.
 - **Restart-safe.** Salts are derived from a secret and the round, and a vote's side is recovered by checking which of the two matches the sealed hash, so a restart between sealing and opening doesn't forfeit a vote.
 
-If the house script isn't running, the game still works between people; a lone visitor's round is void and their stake comes back.
+**Practice rounds and replays.** A practice round runs in the browser against the current table's leans with a fresh roll of who breaks habit; it is labelled "not on chain" and moves no NEAR. A replay animates a finished round from its on-chain counts, with the regulars' picks named where the house service has them.
 
 ## Sybil analysis
 
@@ -144,7 +169,7 @@ Keys never go in the repo: `.env`, `.keys/` and `.contract-keys/` are git-ignore
 ```
 contract/   Rust contract (near-sdk 5.30) and unit tests (src/tests.rs)
 web/        Vite + React + TypeScript + Tailwind single-page app, no backend
-scripts/    deploy.ts, seed.ts (integration test), house.ts (house players), guest.ts (guest accounts), questions.json
+scripts/    deploy.ts, seed.ts (integration test), house.ts (the regulars), guest.ts (guest accounts), judge.ts (`npm run judge`), questions.json
 docs/       SPEC.md, the build spec with amendments
 ```
 
