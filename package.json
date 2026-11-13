@@ -7,7 +7,8 @@
     "test:contract": "cd contract && cargo test",
     "deploy": "tsx --env-file=.env scripts/deploy.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
-    "house": "tsx --env-file-if-exists=.env scripts/house.ts"
+    "house": "tsx --env-file-if-exists=.env scripts/house.ts",
+    "start": "tsx --env-file-if-exists=.env scripts/house.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
