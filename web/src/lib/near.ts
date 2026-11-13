@@ -163,9 +163,55 @@ export function sessionKey(account: string): KeyPair {
 
 export const forgetSessionKey = (account: string) => lsDel(keyStorageId(account));
 
-/** True if this browser's key is on chain as a function-call key for the game. */
+// ---------- guest accounts (no wallet) ----------
+// A guest is a throwaway testnet account made for this browser by the guest API (scripts/guest.ts): the key
+// is generated here and only its public half is sent. The browser holds the account's full key, so it can
+// deposit and play with no wallet at all.
+
+/** Base URL of the guest API, or "" when guest play is off. */
+export const GUEST_API: string = (import.meta.env.VITE_GUEST_API || "").replace(/\/$/, "");
+const guestStorageId = `ooi:${NETWORK}:${CONTRACT_ID}:guest`;
+
+export const isGuest = (account: string | null) => !!account && lsGet(guestStorageId) === account;
+/** The guest account made in this browser earlier, if any. */
+export const savedGuest = (): string | null => {
+  const id = lsGet(guestStorageId);
+  return id && lsGet(keyStorageId(id)) ? id : null;
+};
+
+/** Asks the guest API for a new funded testnet account controlled by a key made in this browser. */
+export async function createGuest(): Promise<string> {
+  const kp = KeyPair.fromRandom("ed25519");
+  const res = await fetch(`${GUEST_API}/guest`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ publicKey: kp.getPublicKey().toString() }),
+  });
+  const j = (await res.json().catch(() => ({}))) as { accountId?: string; error?: string };
+  if (!res.ok || !j.accountId) throw new Error(j.error || "Couldn't create a guest account. Try again, or connect a wallet.");
+  lsSet(keyStorageId(j.accountId), kp.toString());
+  lsSet(guestStorageId, j.accountId);
+  if (lsGet(guestStorageId) !== j.accountId) throw new Error("This browser won't save data, so a guest account can't be kept. Allow site storage, or connect a wallet.");
+  return j.accountId;
+}
+
+/** A guest deposits from its own account balance, signed with its own key (a wallet account can't: see wallet.ts). */
+export async function depositAsGuest(account: string, amountYocto: bigint) {
+  const signer = KeyPairSigner.fromSecretKey(sessionKey(account).toString() as KeyPairString);
+  const acct = new Account(account, currentProvider(), signer);
+  await acct.callFunction({ contractId: CONTRACT_ID, methodName: "deposit", args: {}, gas: 30n * TGAS, deposit: amountYocto });
+}
+
+/** NEAR in the account itself (not in the game). */
+export async function accountBalance(account: string): Promise<bigint> {
+  const a = await rpc<{ amount: string }>("query", { request_type: "view_account", finality: "optimistic", account_id: account });
+  return BigInt(a.amount);
+}
+
+/** True if this browser's key is on chain as a function-call key for the game (a guest's own key always works). */
 export async function sessionKeyActive(account: string): Promise<boolean> {
   if (!lsGet(keyStorageId(account))) return false;
+  if (isGuest(account)) return true;
   try {
     const k = await rpc<{ permission?: unknown; error?: string }>("query", {
       request_type: "view_access_key",

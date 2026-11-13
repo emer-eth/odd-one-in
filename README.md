@@ -11,13 +11,17 @@ Track: **Games With Real Economies** (NEAR Hackathon).
 
 ## Try it in 10 minutes
 
-1. Open https://odd-one-in-zeta.vercel.app and connect a NEAR testnet wallet (free at https://testnet.mynearwallet.com). See the question, the countdown and the streak pot, read live from the contract.
-2. Tap an answer (orange or purple) and deposit 0.5 NEAR. One wallet approval deposits and adds a play key that can only call this game. See your balance in the top bar.
-3. Tap **Seal my pick**. No wallet popup. See "Your pick is in" with a three-step tracker (Sealed, Opening, Result) and a countdown. Within about 15 seconds the "Sealed" count rises as the house players join your round.
-4. Keep the tab open. When the next round starts (3 minutes at most), watch the crowd picture on the right: each opened pick becomes a circle in its side's colour and glides to its side, and the smaller crowd gets a dashed ring marked "smaller so far".
+No wallet, no sign-up:
+
+1. Open https://odd-one-in-zeta.vercel.app. See the question, the countdown and the streak pot, read live from the contract.
+2. Tap an answer (orange or purple), then **Seal my pick**. See three short steps ("Making you a guest account", "Adding free test NEAR", "Sealing your pick"), then "Your pick is in" with a three-step tracker (Sealed, Opening, Result). This takes about 10 to 20 seconds and no wallet opens. The top bar now shows your game balance and "Guest".
+3. Within about 20 seconds the "Sealed" count rises from 1 to 5 or 7 as the house players join your round.
+4. Keep the tab open. When the next round starts (3 minutes at most), watch the crowd picture on the right: each opened pick becomes a circle in its side's colour and glides to its side, yours is marked "YOU", and the smaller crowd gets a dashed ring.
 5. One round later, see the result card: you won a stake, lost it, or the round was void, with **Save card** and **Post on X**. The crowd picture keeps the last result, and the round appears under "Recent rounds".
 
-No wallet? `npm run test:contract` runs the 24 unit tests, and `npm run seed -- status` reads the live contract.
+With your own wallet instead: tap **connect a NEAR testnet wallet** under the answers (free at https://testnet.mynearwallet.com), pick an answer and deposit 0.5 NEAR. One wallet approval deposits and adds a play key that can only call this game; after that there are no popups.
+
+Is it up? `GET <service URL>/health` (the URL is `VITE_GUEST_API` in the deployed app) reports the house players' last round and how many guest accounts are left today. No browser? `npm run test:contract` runs the unit tests, and `npm run seed -- status` reads the live contract.
 
 ## How a round works
 
@@ -68,11 +72,23 @@ If the house script isn't running, the game still works between people; a lone v
 - **The contract can still be upgraded by its owner.** The contract account keeps a full-access key during the hackathon so bugs can be fixed, which means the owner could replace the code. Through the contract's own methods the owner can only add questions and withdraw fees, never touch a player's balance. For real money the key would be deleted so the code can't change.
 - **Three-minute rounds are for the demo.** A vote sealed in one round must be opened in the next, so with 3-minute rounds you need the tab open (it opens the vote for you) or to come back within that window. The app shows the exact times before and after you seal. The design is a daily round, where the window is a whole day.
 - House players are run by the project (see above). They are disclosed in the app's Fair play section.
+- Guest accounts are custodial testnet accounts (see "Guest accounts"). They would not exist in this form with real money.
 
 - A missed reveal round forfeits that vote's stake and bond.
 - Salts live in one browser's localStorage. A vote sealed on one device can't be opened from another, and clearing site data before the reveal loses it. The app warns about this after your first vote.
 - A player can have at most 10 committed rounds waiting to be claimed (`TOO_MANY_PENDING`), and `claim` processes at most 10 rounds per call.
 - The session key is limited to 2 NEAR of gas allowance. When that runs out, the app asks for one wallet approval to replace it.
+
+## Guest accounts (play without a wallet)
+
+Tapping an answer without a wallet makes a **guest account**, so a first-time player never sees a seed phrase, a wallet popup or a gas prompt.
+
+- The browser generates an ed25519 key and sends only the **public** key to the guest service (`scripts/guest.ts`, the same always-on process as the house players).
+- The service creates a throwaway testnet account `g-<random>.<funder>.testnet` with that key and 0.5 test NEAR. The browser then deposits and plays by itself; the service never sees a pick, a salt or the private key.
+- The funder's own key is also added to each guest account, so unused test NEAR can be reclaimed. That makes a guest account **custodial and for testnet only**. To play from an account only you control, connect a wallet.
+- Limits: 40 guest accounts a day in total and 3 a day per address (`GUEST_DAILY`, `GUEST_PER_IP`), and the service refuses when the funder runs low. When guests run out, the app falls back to "connect a wallet".
+- A guest keeps 0.14 NEAR outside the game for gas, because gas is prepaid and refunded.
+- The guest account lives in that browser's storage. Clearing site data loses it.
 
 ## Wallet and session key
 
@@ -109,14 +125,15 @@ npm run seed -- setup --players 15
 npm run seed -- loop --a 6 --b 8 --unrevealed 1   # commit → reveal → claim, then checks the payout math
 npm run seed -- status
 
-# house players (optional; an always-on process)
+# house players and guest accounts (one always-on process)
 npm run house -- fund 0.6     # top up their game balances from the owner account
 npm run house                 # joins rounds people play; --now also plays the current round
+# with GUEST_FUNDER (or GUEST_FUNDER_FILE) set, the same process serves POST /guest and GET /health on PORT
 
 # web app
 cd web
 npm install
-cp .env.example .env          # VITE_NETWORK, VITE_CONTRACT_ID
+cp .env.example .env          # VITE_NETWORK, VITE_CONTRACT_ID, VITE_GUEST_API (the service above; empty = wallet only)
 npm run dev                   # or: npm run build → static files in web/dist
 ```
 
@@ -127,7 +144,7 @@ Keys never go in the repo: `.env`, `.keys/` and `.contract-keys/` are git-ignore
 ```
 contract/   Rust contract (near-sdk 5.30) and unit tests (src/tests.rs)
 web/        Vite + React + TypeScript + Tailwind single-page app, no backend
-scripts/    deploy.ts, seed.ts (integration test), house.ts (house players), questions.json
+scripts/    deploy.ts, seed.ts (integration test), house.ts (house players), guest.ts (guest accounts), questions.json
 docs/       SPEC.md, the build spec with amendments
 ```
 

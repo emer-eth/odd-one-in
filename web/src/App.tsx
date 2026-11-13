@@ -6,8 +6,14 @@ import { Fairness, Footer, HowItWorks, Logo, Payouts, RecentRounds } from "./com
 import { ResultCard } from "./components/ResultCard";
 import { commitHash, deleteSalt, loadSalt, newSalt, readableError, saveSalt } from "./lib/game";
 import {
+  GUEST_API,
+  accountBalance,
   callWithKey,
+  createGuest,
+  depositAsGuest,
   fmtNear,
+  isGuest,
+  savedGuest,
   sessionKey,
   sessionKeyActive,
   view,
@@ -22,6 +28,9 @@ import { connectWallet, depositWithWallet, disconnectWallet, enableOneTap, resto
 type Result = { item: ClaimItem; round: RoundView };
 
 const WARNED_KEY = "ooi:warned-storage";
+/** A guest keeps this much NEAR outside the game for gas. Gas is prepaid and mostly refunded: a full
+ *  `play` call can hold about 0.11 NEAR for a moment on testnet, so less than this makes the call bounce. */
+const GUEST_GAS_RESERVE = 140_000_000_000_000_000_000_000n; // 0.14 NEAR
 
 export default function App() {
   const [account, setAccount] = useState<string | null>(null);
@@ -35,9 +44,17 @@ export default function App() {
   const [, tick] = useState(0);
   const autoTried = useRef(new Set<string>());
   const [depositSignal, setDepositSignal] = useState(0);
+  const [nudge, setNudge] = useState(0);
+  useEffect(() => {
+    if (!nudge) return;
+    g.refresh();
+    g.refreshKey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nudge]);
 
   useEffect(() => {
-    restoreAccount().then((a) => a && setAccount(a));
+    // A connected wallet first; otherwise the guest account this browser made earlier.
+    restoreAccount().then((a) => setAccount(a ?? savedGuest()));
   }, []);
 
   // Countdown animation between polls; refresh as soon as the round rolls over.
@@ -126,6 +143,7 @@ export default function App() {
     try {
       setBusy("Connecting wallet");
       setAccount(await connectWallet());
+      setSelected(null);
     } catch (e) {
       setError(readableError(e));
     } finally {
@@ -135,11 +153,17 @@ export default function App() {
 
   const deposit = async (yocto: bigint) => {
     if (!account) return;
-    setBusy("Waiting for your wallet");
+    setBusy(isGuest(account) ? "Adding test NEAR" : "Waiting for your wallet");
     setError(null);
     try {
-      const active = await sessionKeyActive(account);
-      await depositWithWallet(account, yocto, !active);
+      if (isGuest(account)) {
+        const spare = (await accountBalance(account)) - GUEST_GAS_RESERVE;
+        if (spare < yocto) throw new Error("This guest account has used up its test NEAR. Connect a NEAR testnet wallet to keep playing.");
+        await depositAsGuest(account, yocto);
+      } else {
+        const active = await sessionKeyActive(account);
+        await depositWithWallet(account, yocto, !active);
+      }
       await g.refreshKey();
     } catch (e) {
       setError(readableError(e));
@@ -202,9 +226,48 @@ export default function App() {
     }
   };
 
+  /** No wallet: make a guest account, put its test NEAR in the game and seal the pick, in one go. */
+  const playAsGuest = async () => {
+    if (!cur || !cfg || !selected) return;
+    const side = selected;
+    const round = cur.id;
+    setError(null);
+    try {
+      setBusy("Making you a guest account");
+      const acct = savedGuest() ?? (await createGuest());
+      setAccount(acct);
+      const player = await view<{ balance: string } | null>("get_player", { account_id: acct });
+      if (BigInt(player?.balance ?? 0) < cost) {
+        setBusy("Adding free test NEAR");
+        const spare = (await accountBalance(acct)) - GUEST_GAS_RESERVE;
+        if (spare < cost + BigInt(cfg.storage_fee)) throw new Error("This guest account has used up its test NEAR. Connect a NEAR testnet wallet to keep playing.");
+        await depositAsGuest(acct, spare);
+      }
+      setBusy("Sealing your pick");
+      const salt_hex = newSalt();
+      if (!saveSalt(acct, round, { choice: side, salt_hex })) throw new Error("This browser won't save data, so your pick couldn't be opened later. Allow site storage and try again.");
+      const hash = await commitHash(round, acct, side, salt_hex);
+      const res = await callWithKey<PlayResult>(acct, "play", { reveal: null, commit: { round_id: round, hash } }, 50);
+      if (!res.commit?.ok) {
+        deleteSalt(acct, round);
+        throw new Error(res.commit?.error || "The pick wasn't sealed.");
+      }
+      setJustSealed(true);
+      setSelected(null);
+      setWarnStorage(true);
+    } catch (e) {
+      setError(readableError(e));
+    } finally {
+      setBusy(null);
+      // `g` here still belongs to the render before the guest account existed: refresh from the next render.
+      setNudge((n) => n + 1);
+    }
+  };
+
   const disconnect = async () => {
+    if (isGuest(account)) return; // a guest account lives in this browser; there is nothing to disconnect
     await disconnectWallet();
-    setAccount(null);
+    setAccount(savedGuest());
   };
 
   if (!cfg || !cur) {
@@ -215,6 +278,8 @@ export default function App() {
     );
   }
 
+  const guest = isGuest(account);
+  const guestOn = !!GUEST_API;
   const needsDeposit = account && !committed && balance < cost;
   const needsKey = account && g.player && g.keyActive === false;
   const canPick = !committed && !busy;
@@ -236,9 +301,15 @@ export default function App() {
             {account ? (
               <>
                 <BalanceChip player={g.player} config={cfg} busy={!!busy} onDeposit={deposit} onWithdraw={withdraw} openSignal={depositSignal} />
-                <button onClick={disconnect} className="hidden max-w-[10rem] truncate text-sm text-ink-2 hover:text-ink sm:block" title="Disconnect">
-                  {account}
-                </button>
+                {guest ? (
+                  <button onClick={connect} disabled={!!busy} className="hidden text-sm text-ink-2 underline-offset-4 hover:text-ink hover:underline sm:block" title={`Guest account ${account}: a free testnet account kept in this browser. Connect a wallet to play from your own account.`}>
+                    Guest · use a wallet
+                  </button>
+                ) : (
+                  <button onClick={disconnect} className="hidden max-w-[10rem] truncate text-sm text-ink-2 hover:text-ink sm:block" title="Disconnect">
+                    {account}
+                  </button>
+                )}
               </>
             ) : (
               <button onClick={connect} disabled={!!busy} className="rounded-xl bg-odd px-4 py-2 text-sm font-bold text-night disabled:opacity-50">
@@ -332,7 +403,7 @@ export default function App() {
                       <button
                         key={side}
                         disabled={!canPick}
-                        onClick={() => (account ? setSelected(isSel ? null : side) : connect())}
+                        onClick={() => (account || guestOn ? setSelected(isSel ? null : side) : connect())}
                         aria-pressed={isSel}
                         className={`relative flex min-h-[150px] flex-col justify-between rounded-3xl p-5 text-left transition duration-200 sm:min-h-[190px] ${side === "A" ? "bg-side-a text-night" : "bg-side-b text-white"} ${
                           dim ? "opacity-30" : "hover:-translate-y-0.5"
@@ -350,30 +421,39 @@ export default function App() {
             {selected && !committed && (
               <div className="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-board-line bg-board-2/95 p-3 pl-5 backdrop-blur">
                 <p className="flex-1 text-sm text-dim">
-                  Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} NEAR (bond{" "}
+                  Seal <span className="font-semibold text-chalk">{selected === "A" ? cur.question.a : cur.question.b}</span> · {fmtNear(cost)} {account ? "NEAR" : "test NEAR, on us"} (bond{" "}
                   {fmtNear(cfg.bond)} returns when opened)
                   <span className="mt-1 block text-xs">
                     It must be opened {openWindow}. This tab does it for you if it stays open; unopened picks lose stake and bond.
                   </span>
                 </p>
                 <button
-                  onClick={needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
+                  onClick={!account ? playAsGuest : needsDeposit ? () => setDepositSignal((n) => n + 1) : needsKey ? enable : seal}
                   disabled={!!busy}
                   className="rounded-full bg-odd px-6 py-3 font-semibold text-night disabled:opacity-40"
                 >
-                  {needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal my pick"}
+                  {!account ? "Seal my pick" : needsDeposit ? "Deposit first" : needsKey ? "Enable one-tap" : "Seal my pick"}
                 </button>
               </div>
             )}
 
-            {!account && (
-              <p className="mt-4 text-sm text-dim">
-                Tap an answer to connect a NEAR testnet wallet.{" "}
-                <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
-                  Need one?
-                </a>
-              </p>
-            )}
+            {!account &&
+              (guestOn ? (
+                <p className="mt-4 text-sm text-dim">
+                  No wallet needed: tap an answer and you get a free guest account with test NEAR. Or{" "}
+                  <button className="underline" onClick={connect}>
+                    connect a NEAR testnet wallet
+                  </button>
+                  .
+                </p>
+              ) : (
+                <p className="mt-4 text-sm text-dim">
+                  Tap an answer to connect a NEAR testnet wallet.{" "}
+                  <a className="underline" href="https://testnet.mynearwallet.com" target="_blank" rel="noreferrer">
+                    Need one?
+                  </a>
+                </p>
+              ))}
 
             <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 font-mono text-xs uppercase tracking-widest text-dim">
               <div>

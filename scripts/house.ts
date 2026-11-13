@@ -11,12 +11,15 @@
 //   npm run house -- status       the house players' balances
 //   npm run house -- fund 0.6     top each house player up to this many NEAR in the game (from FUNDER, else the owner)
 //
+// With GUEST_FUNDER (or PORT) set, the same process also serves the guest-account API (scripts/guest.ts).
+//
 // Keys: HOUSE_KEYS (a JSON list of { accountId, secretKey }) or .keys/seed.json. Salts are derived from
 // HOUSE_SECRET and the round, so a restart between sealing and opening doesn't lose a vote.
 import { createHash, createHmac } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { nearToYocto } from "near-api-js";
 import { accountFromKey, contractId, fmt, parentAccount, provider, view } from "./lib";
+import { guestFunder, startGuestServer } from "./guest";
 
 type Choice = "A" | "B";
 type Bot = { accountId: string; secretKey: string };
@@ -59,6 +62,9 @@ async function call<T = unknown>(b: Bot, methodName: string, args: Record<string
   }
   return null;
 }
+
+let lastSeen = -1; // for /health
+let lastSealed: { round: number; votes: number; why: string } | null = null;
 
 let cfg: Cfg;
 let offsetMs = 0;
@@ -104,6 +110,7 @@ async function seal(round: number, why: string) {
     }),
   );
   log(`round ${round}: ${done} house votes sealed (${why})`);
+  if (done) lastSealed = { round, votes: done, why };
 }
 
 /** Opens the house's votes from `round`. The side isn't stored anywhere: the salt is derived, and the side is
@@ -179,6 +186,7 @@ async function run() {
   for (;;) {
     try {
       const { round, msLeft } = await clock();
+      lastSeen = round;
       if (round !== last) {
         // A new round: open what the house sealed last round, collect finished rounds, and learn where we are
         // (after a restart the house may already have votes in this round).
@@ -204,7 +212,11 @@ async function run() {
   }
 }
 
+/** What /health reports about the house. */
+export const houseInfo = () => ({ players: bots.length, showcaseEvery: SHOWCASE_EVERY, lastRoundSeen: lastSeen, lastSealed });
+
 const cmd = process.argv[2];
+if (cmd !== "status" && cmd !== "fund" && (process.env.PORT || guestFunder())) startGuestServer(houseInfo);
 (cmd === "status" ? status() : cmd === "fund" ? fund(process.argv[3] || "0.6") : run()).catch((e) => {
   console.error("❌", e instanceof Error ? e.message : e);
   process.exit(1);

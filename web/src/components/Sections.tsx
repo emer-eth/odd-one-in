@@ -215,6 +215,10 @@ export function Fairness({ config, pot, n }: { config: Config; pot: string; n: s
               "House players",
               "A minority game needs a crowd, so a few house accounts join any round a person plays, and play a round of their own every couple of hours. They are ordinary accounts using the same public methods, stake and bond as you. They pick sides from a random number and can't see your vote; nobody can until it's opened.",
             ],
+            [
+              "Guest accounts",
+              "Playing without a wallet uses a free testnet account made for your browser: the key is generated here and only its public half is sent. The project's guest funder keeps a key to it too, so unused test NEAR can be reclaimed. It is for trying the game on testnet; connect a wallet to play from an account only you control.",
+            ],
             ["Known limit", "Votes are opened in public. A big group of wallets on one side can watch the count and leave some unopened to flip a thin margin. Each one forfeits its stake and bond, which makes it costly but doesn't rule it out."],
           ].map(([t, d]) => (
             <div key={t} className="grid gap-2 border-b border-rule py-5 sm:grid-cols-[12rem_1fr] sm:gap-6">
