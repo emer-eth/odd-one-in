@@ -28,6 +28,7 @@ type Player = { balance: string; streak: number; pending: number[] };
 type Entry = { committed: boolean; revealed: Choice | null };
 
 const TGAS = 1_000_000_000_000n;
+const WALLET_MIN = 300_000_000_000_000_000_000_000n; // 0.3 NEAR kept in each house wallet for gas
 const POLL_MS = Number(process.env.HOUSE_POLL_MS || 12_000);
 /** A showcase round every this many rounds (40 three-minute rounds = every 2 hours). 0 turns it off. */
 const SHOWCASE_EVERY = Number(process.env.HOUSE_SHOWCASE_EVERY ?? 40);
@@ -168,6 +169,12 @@ async function fund(target: string) {
   const payer = process.env.FUNDER ? (() => { const k = JSON.parse(readFileSync(process.env.FUNDER!, "utf8")); return accountFromKey(k.accountId, k.secretKey); })() : parentAccount();
   const want = nearToYocto(target);
   for (const b of bots) {
+    // Gas is prepaid from the wallet (a claim holds about 0.06 NEAR), so a thin wallet stalls the player.
+    const wallet = BigInt((await provider().viewAccount({ accountId: b.accountId })).amount);
+    if (wallet < WALLET_MIN) {
+      await payer.transfer({ receiverId: b.accountId, amount: WALLET_MIN - wallet });
+      console.log(`✅ ${short(b.accountId)}: wallet topped up to ${fmt(WALLET_MIN)} NEAR for gas`);
+    }
     const p = await view<Player | null>("get_player", { account_id: b.accountId });
     const have = BigInt(p?.balance ?? 0);
     if (have >= want) continue;
